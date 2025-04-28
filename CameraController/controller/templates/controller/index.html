@@ -1,0 +1,108 @@
+<!-- CameraController/controller/templates/controller/index.html -->
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>USB Camera Controller</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 800px;
+      margin: 2em auto;
+      padding: 0 1em;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    img {
+      width: 100%;
+      max-height: 400px;
+      border: 1px solid #ccc;
+    }
+    .controls {
+      margin-top: 1.5em;
+    }
+    .controls form {
+      display: inline-block;
+      margin-right: 1em;
+      margin-bottom: 1em;
+    }
+    label {
+      margin-right: 0.5em;
+    }
+    input[type="number"] {
+      width: 4em;
+    }
+    button {
+      padding: 0.3em 0.6em;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .actions {
+      margin-top: 2em;
+    }
+    .actions button,
+    .actions form button {
+      background: #28a745;
+    }
+    .actions button:hover,
+    .actions form button:hover {
+      background: #1e7e34;
+    }
+  </style>
+</head>
+<body>
+  <h1>USB Camera Controller</h1>
+
+  <!-- Live MJPEG stream -->
+  <img src="{{ stream_url }}" alt="Live camera stream" />
+
+  <!-- Camera settings forms -->
+  <div class="controls">
+    <h2>Adjust Settings</h2>
+    {% for s in settings %}
+      <form method="post" action="{% url 'set_setting' s %}">
+        {% csrf_token %}
+        <label for="id_{{ s }}">{{ s|capfirst }}:</label>
+        <input id="id_{{ s }}" type="number" name="value" required />
+        <button type="submit">Set</button>
+      </form>
+    {% endfor %}
+  </div>
+
+  <!-- Actions: restart & health check -->
+  <div class="actions">
+    <h2>Actions</h2>
+
+    <!-- Restart camera -->
+    <form method="post" action="{% url 'restart' %}" style="display:inline-block;">
+      {% csrf_token %}
+      <button type="submit">Restart Camera</button>
+    </form>
+
+    <!-- Health check -->
+    <button id="health-btn">Health Check</button>
+    <pre id="health-output" style="margin-top:1em; background:#f8f9fa; padding:0.5em; border:1px solid #ddd;"></pre>
+  </div>
+
+  <script>
+    document.getElementById('health-btn').addEventListener('click', function() {
+      fetch("{% url 'health' %}")
+        .then(response => response.json().then(data => {
+          const out = document.getElementById('health-output');
+          out.textContent = JSON.stringify(data, null, 2);
+        }))
+        .catch(err => {
+          document.getElementById('health-output').textContent = 'Error fetching health.';
+        });
+    });
+  </script>
+</body>
+</html>

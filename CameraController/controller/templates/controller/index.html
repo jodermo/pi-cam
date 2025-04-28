@@ -60,6 +60,22 @@
 </head>
 <body>
   <h1>USB Camera Controller</h1>
+  <!-- Camera selector -->
+  <div class="controls">
+    <h2>Choose Camera</h2>
+    <form method="post" action="{% url 'switch_camera' idx=active_index %}">
+      {% csrf_token %}
+      <label for="camera-select">Source:</label>
+      <select id="camera-select" name="idx" onchange="this.form.action='{% url 'switch_camera' idx=0 %}'.replace('0', this.value); this.form.submit();">
+        {% for src in camera_list %}
+          <option value="{{ forloop.counter0 }}"
+            {% if forloop.counter0 == active_index %}selected{% endif %}>
+            {{ src }}
+          </option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
 
   <!-- Live MJPEG stream -->
   <img src="{{ stream_url }}" alt="Live camera stream" />

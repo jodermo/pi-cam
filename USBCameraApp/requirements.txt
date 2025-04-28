@@ -1,4 +1,5 @@
+# USBCameraApp/requirements.txt
 fastapi
 uvicorn[standard]
-opencv-python-headless
-numpy
+opencv-python
+python-dotenv

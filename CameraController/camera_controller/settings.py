@@ -1,5 +1,3 @@
-# CameraController/camera_controller/settings.py
-
 import os
 import dj_database_url
 from pathlib import Path
@@ -14,19 +12,27 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 # Hosts
 ALLOWED_HOSTS = os.getenv(
     'DJANGO_ALLOWED_HOSTS',
-    'really.dont-use.com'
+    f"127.0.0.1,localhost,{os.getenv('DOMAIN','really.dont-use.com')}"
 ).split(',')
 
 # Application definition
 INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
     'django.contrib.staticfiles',  # for serving static files
     'controller',                  # your camera controller app
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -41,6 +47,8 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.static',
             ],
         },
@@ -57,7 +65,7 @@ DATABASES = {
     )
 }
 
-# Password validation (optional, can remove if you don't use auth)
+# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -73,7 +81,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Internationalization (configure as needed)
+# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
@@ -89,3 +97,20 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Custom camera controller settings
+CAMERA_API_URL = os.getenv('CAMERA_API_URL', '/api')
+CAMERA_LOCATIONS = [
+    loc.strip() for loc in os.getenv('CAMERA_LOCATIONS', '').split(',')
+    if loc.strip()
+]
+
+
+# URL where requests are redirected for login (must match your login_view path)
+LOGIN_URL = '/login/'
+
+# After login, redirect here by default
+LOGIN_REDIRECT_URL = '/'
+
+# (Optional) After logout, redirect here
+LOGOUT_REDIRECT_URL = '/login/'

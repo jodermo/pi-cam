@@ -1,0 +1,35 @@
+# nginx/conf.d/default.conf.https.template
+
+# Redirect HTTP→HTTPS
+server {
+  listen      80;
+  server_name ${DOMAIN};
+  return      301 https://$host$request_uri;
+}
+
+server {
+  listen 443 ssl http2;
+  server_name ${DOMAIN};
+
+  ssl_certificate     ${SSL_CERTIFICATE};
+  ssl_certificate_key ${SSL_CERTIFICATE_KEY};
+
+  # 1) Camera API
+  location /api/ {
+      rewrite ^/api/(.*)$ /$1 break;
+      proxy_pass         http://pi-cam-camera:8000;
+      proxy_set_header   Host $host;
+      proxy_set_header   X-Real-IP $remote_addr;
+  }
+
+  # 2) Django
+  location / {
+      proxy_pass         http://pi-cam-controller:8001;
+      proxy_set_header   Host $host;
+      proxy_set_header   X-Real-IP $remote_addr;
+  }
+
+  # 3) Static & media
+  location /static/ { alias /app/static/; }
+  location /media/  { alias /app/media/;  }
+}

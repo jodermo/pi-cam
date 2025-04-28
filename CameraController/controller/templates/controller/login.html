@@ -1,0 +1,73 @@
+<!-- CameraController/controller/templates/controller/login.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login – USB Camera Controller</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 400px;
+      margin: 5em auto;
+      padding: 0 1em;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 1em;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
+    }
+    label {
+      text-align: left;
+      font-weight: bold;
+    }
+    input[type="text"],
+    input[type="password"] {
+      padding: 0.5em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1em;
+      width: 100%;
+    }
+    button {
+      padding: 0.6em;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 4px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .error {
+      color: #c00;
+      margin-bottom: 1em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Login</h1>
+  {% if error %}
+    <div class="error">{{ error }}</div>
+  {% endif %}
+  <form method="post" action="{% url 'login' %}">
+    {% csrf_token %}
+    <div>
+      <label for="id_username">Username:</label>
+      <input id="id_username" type="text" name="username" required autofocus />
+    </div>
+    <div>
+      <label for="id_password">Password:</label>
+      <input id="id_password" type="password" name="password" required />
+    </div>
+    <button type="submit">Log In</button>
+  </form>
+</body>
+</html>

@@ -1,4 +1,4 @@
-# CameraController/Dockerfile
+## CameraController/Dockerfile
 
 FROM python:3.10-slim
 
@@ -21,11 +21,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application
 COPY . .
 
-# Collect static files into /app/static (served by nginx)
-RUN python manage.py collectstatic --noinput
+# Copy and register our entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Expose Django port internally (nginx will proxy to this)
 EXPOSE 8001
 
-# Launch Gunicorn
+# Use the entrypoint to run migrations, collectstatic, then exec CMD
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Default command: launch Gunicorn
 CMD ["gunicorn", "camera_controller.wsgi:application", "--bind", "0.0.0.0:8001"]

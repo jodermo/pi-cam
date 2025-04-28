@@ -1,0 +1,29 @@
+# nginx/conf.d/default.conf.http.template
+
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    # —————————————————————————
+    # 1) Camera API proxy
+    location /api/ {
+        # strip the /api prefix and forward to camera service
+        rewrite ^/api/(.*)$ /$1 break;
+        proxy_pass         http://pi-cam-camera:8000;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+    }
+
+    # —————————————————————————
+    # 2) Django app proxy
+    location / {
+        proxy_pass         http://pi-cam-controller:8001;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+    }
+
+    # —————————————————————————
+    # 3) Static & media served by Nginx
+    location /static/ { alias /app/static/; }
+    location /media/  { alias /app/media/;  }
+}

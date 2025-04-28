@@ -4,10 +4,11 @@ services:
   pi-cam-camera:
     build: ./USBCameraApp
     restart: always
-    devices:
-      - "/dev/video0:/dev/video0"
+    # devices:
+      # - "/dev/video0:/dev/video0"
+    env_file:
+      - ./.env
     environment:
-      CAMERA_DEVICE: "/dev/video0"
       STREAM_PORT: 8000
       CONTROLLER_URL: "http://pi-cam-controller:8001"
 
@@ -17,8 +18,9 @@ services:
     depends_on:
       - pi-cam-camera
       - pi-cam-database
+    env_file:
+      - ./.env
     environment:
-      CAMERA_API_URL: "/api"
       DATABASE_URL: "postgres://camuser:securepass@pi-cam-database:5432/camdb"
       CAMERA_SERVICE_URL: "http://pi-cam-camera:8000"
     expose:
@@ -28,14 +30,15 @@ services:
       - static_data:/app/static
 
   pi-cam-nginx:
-    image: nginx:alpine
+    build: ./nginx
     restart: always
     ports:
       - "80:80"
       - "443:443"
+    env_file:
+      - ./.env
     volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./nginx/letsencrypt:/etc/letsencrypt:ro
       - static_data:/app/static:ro
       - media_data:/app/media:ro
     depends_on:
@@ -45,10 +48,8 @@ services:
   pi-cam-database:
     image: postgres:14-alpine
     restart: always
-    environment:
-      POSTGRES_DB: camdb
-      POSTGRES_USER: camuser
-      POSTGRES_PASSWORD: securepass
+    env_file:
+      - ./.env
     volumes:
       - db_data:/var/lib/postgresql/data
 

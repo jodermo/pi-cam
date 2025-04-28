@@ -4,14 +4,19 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # Main dashboard
-    path('', views.index, name='index'),
-    # Adjust a camera setting
+    # Authentication
+    path('login/',  views.login_view,  name='login'),
+    path('logout/', views.logout_view, name='logout'),
+
+    # Main dashboard (requires login)
+    path('',               views.index,          name='index'),
     path('set/<str:setting>/', views.set_setting, name='set_setting'),
-    # Restart the camera service
-    path('restart/', views.restart, name='restart'),
-    # Health check endpoint
-    path('health/', views.health, name='health'),
-    # Receive events/webhooks from the camera service
-    path('camera-event/', views.camera_event, name='camera_event'),
+    path('restart/',       views.restart,        name='restart'),
+    path('switch/<int:idx>/', views.switch_camera, name='switch_camera'),
+
+    # Public health endpoint
+    path('health/',        views.health,         name='health'),
+
+    # Protected camera events webhook
+    path('camera-event/',  views.camera_event,   name='camera_event'),
 ]

@@ -38,7 +38,7 @@ services:
     env_file:
       - ./.env
     volumes:
-      - ./nginx/letsencrypt:/etc/letsencrypt:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
       - static_data:/app/static:ro
       - media_data:/app/media:ro
     depends_on:

@@ -41,7 +41,7 @@ server {
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
     }
-    
+
     # Main controller app proxy
     location / {
         proxy_pass         http://pi-cam-controller:8001;
@@ -57,9 +57,18 @@ server {
         expires 1h;
     }
 
+    # serve media (photos, videos, timelapse) directly with proper MIME + range support
     location /media/ {
-        proxy_pass         http://pi-cam-controller:8001/media/;
-        proxy_set_header   Host $host;
-        proxy_set_header   X-Real-IP $remote_addr;
+        alias /app/media/;              # point this at your MEDIA_ROOT
+        autoindex off;
+        # ensure .mp4 → video/mp4, .jpg → image/jpeg, etc.
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        # allow byte-range requests so <video> can stream and seek
+        add_header   Accept-Ranges  bytes;
+        # optional caching
+        expires      1h;
     }
+
 }

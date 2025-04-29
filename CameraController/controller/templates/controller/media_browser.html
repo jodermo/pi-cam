@@ -48,10 +48,13 @@
       wrapper.className = 'gallery-item';
       if (isVideo) {
         const vid = document.createElement('video');
-        vid.src = item.url;
         vid.controls = true;
-        vid.width = 240;
-        wrapper.appendChild(vid);
+
+        const src = document.createElement('source');
+        src.src  = item.url;
+        src.type = 'video/mp4';
+
+        vid.appendChild(src);
       } else {
         const img = document.createElement('img');
         img.src = item.url + '?_=' + Date.now();

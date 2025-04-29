@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyc
+*.pyo
+*.pyd
+*.pdm.toml
+*.mypy_cache/
+
+# Django specific
+*.sqlite3
+db.sqlite3
+.env
+.env.*
+
+# Django media files (uploaded photos, videos, timelapse images)
+media/
+MEDIA/
+
+# Django staticfiles
+staticfiles/
+static/
+
+# Logs
+*.log
+*.log.*
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Docker related
+*.pid
+docker-compose.override.yml
+
+# VSCode settings
+.vscode/
+
+# IDE/editor stuff
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Node.js (optional if frontend tooling is used)
+node_modules/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Uvicorn / Gunicorn
+gunicorn.log
+gunicorn-access.log
+gunicorn-error.log

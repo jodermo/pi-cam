@@ -6,7 +6,7 @@
 {% block content %}
 <h1>Timelapse Gallery</h1>
 
-<form method="post" id="timelapse-form">
+<form method="post" id="timelapse-form" action="{% url 'timelapse_gallery' %}">
   {% csrf_token %}
   {% for field in form.visible_fields %}
     <div class="form-group">
@@ -52,7 +52,7 @@
   document.getElementById('timelapse-form').onsubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    await fetch("{% url 'api_timelapse_settings' %}", {
+    await fetch("{% url 'timelapse_gallery' %}", {
       method: 'POST',
       headers: {'X-CSRFToken': '{{ csrf_token }}'},
       body: formData
@@ -60,8 +60,6 @@
     loadTimelapse();
   };
 
-  window.onload = () => {
-    loadTimelapse();
-  };
+  window.onload = () => loadTimelapse();
 </script>
 {% endblock %}

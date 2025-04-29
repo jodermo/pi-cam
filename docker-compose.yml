@@ -44,6 +44,7 @@ services:
     depends_on:
       - pi-cam-controller
       - pi-cam-camera
+    entrypoint: ["sh","-c","sleep 10 && nginx -g 'daemon off;'"]
 
   pi-cam-database:
     image: postgres:14-alpine

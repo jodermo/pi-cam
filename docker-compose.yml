@@ -1,34 +1,49 @@
+version: '3.8'
 
 services:
-
+  # USB camera capture service (MJPEG)
   pi-cam-camera:
     build: ./USBCameraApp
     restart: always
-    # devices:
-      # - "/dev/video0:/dev/video0"
+    devices:
+      - /dev/video0:/dev/video0
     env_file:
       - ./.env
     environment:
-      STREAM_PORT: 8000
-      CONTROLLER_URL: "http://pi-cam-controller:8001"
+      - STREAM_PORT=8000
+      - CONTROLLER_URL=http://pi-cam-controller:8001
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
+  # Django controller / API
   pi-cam-controller:
     build: ./CameraController
     restart: always
     depends_on:
-      - pi-cam-camera
-      - pi-cam-database
+      pi-cam-camera:
+        condition: service_healthy
+      pi-cam-database:
+        condition: service_started
     env_file:
       - ./.env
     environment:
-      DATABASE_URL: "postgres://camuser:securepass@pi-cam-database:5432/camdb"
-      CAMERA_SERVICE_URL: "http://pi-cam-camera:8000"
+      - DATABASE_URL=postgres://camuser:securepass@pi-cam-database:5432/camdb
+      - CAMERA_SERVICE_URL=http://pi-cam-camera:8000
     expose:
       - "8001"
     volumes:
       - media_data:/app/media
       - static_data:/app/static
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/health/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
+  # Nginx reverse proxy (HTTPS)
   pi-cam-nginx:
     build: ./nginx
     restart: always
@@ -38,13 +53,17 @@ services:
     env_file:
       - ./.env
     volumes:
-      - ./nginx/letsencrypt:/etc/letsencrypt:ro
+      # mount real certs or dev certs into container
+      - /etc/letsencrypt:/etc/letsencrypt:ro
       - static_data:/app/static:ro
       - media_data:/app/media:ro
     depends_on:
-      - pi-cam-controller
-      - pi-cam-camera
+      pi-cam-controller:
+        condition: service_healthy
+      pi-cam-camera:
+        condition: service_healthy
 
+  # PostgreSQL database
   pi-cam-database:
     image: postgres:14-alpine
     restart: always
@@ -52,6 +71,11 @@ services:
       - ./.env
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   db_data:

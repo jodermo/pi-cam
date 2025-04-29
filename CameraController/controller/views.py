@@ -193,36 +193,45 @@ def set_setting(request, setting):
 @login_required
 def capture_photo(request):
     """
-    Capture one frame from the camera stream, save it under MEDIA_ROOT/photos/,
-    and return it as a JPEG download.
+    Capture one frame from the camera MJPEG stream, persist it under MEDIA_ROOT/photos/,
+    and return it immediately as a JPEG download.
     """
     # 1) open the MJPEG/video stream
-    cap = cv2.VideoCapture(settings.CAMERA_API_URL + '/stream')
+    cap = cv2.VideoCapture(STREAM_URL)
+    if not cap.isOpened():
+        return JsonResponse({'error': f'Cannot open stream at {STREAM_URL}'}, status=503)
+
     ret, frame = cap.read()
     cap.release()
 
     if not ret or frame is None:
         return JsonResponse({'error': 'Could not read frame from stream'}, status=500)
 
-    # 2) ensure the photos folder exists
+    # 2) ensure the photos folder exists under MEDIA_ROOT
     photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
-    os.makedirs(photos_dir, exist_ok=True)
+    try:
+        os.makedirs(photos_dir, exist_ok=True)
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to create photos directory: {e}'}, status=500)
 
-    # 3) build a timestamped filename
+    # 3) build a UTC timestamped filename
     fname = datetime.utcnow().strftime('photo_%Y%m%d_%H%M%S.jpg')
     fpath = os.path.join(photos_dir, fname)
 
     # 4) write the JPEG to disk
-    success = cv2.imwrite(fpath, frame)
+    try:
+        success = cv2.imwrite(fpath, frame)
+    except Exception as e:
+        return JsonResponse({'error': f'Exception writing file: {e}'}, status=500)
     if not success:
         return JsonResponse({'error': 'Failed to write photo to disk'}, status=500)
 
-    # 5) read back & encode for immediate response
+    # 5) encode the frame for immediate response
     ret, buf = cv2.imencode('.jpg', frame)
     if not ret:
         return JsonResponse({'error': 'Failed to encode JPEG'}, status=500)
 
-    # 6) return the JPEG as an attachment download
+    # 6) send the JPEG as an attachment download
     response = HttpResponse(buf.tobytes(), content_type='image/jpeg')
     response['Content-Disposition'] = f'attachment; filename="{fname}"'
     return response

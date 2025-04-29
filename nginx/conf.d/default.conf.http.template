@@ -1,17 +1,23 @@
-# nginx/conf.d/default.conf.http.template
-
-# ─────────────── MIME setup ────────────────────
-include       /etc/nginx/mime.types;
-# ────────────────────────────────────────────────
-
+# ── SSL redirect ─────────────────────────────────
 server {
     listen 80;
     server_name ${DOMAIN};
+    return 301 https://$host$request_uri;
+}
 
+# ── HTTPS server ────────────────────────────────
+server {
+    listen 443 ssl;      # http2 enabled globally via http2;
+    server_name ${DOMAIN};
 
-    # MJPEG stream - proxy directly to camera container
+    ssl_certificate     ${SSL_CERTIFICATE};
+    ssl_certificate_key ${SSL_CERTIFICATE_KEY};
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+    # MJPEG stream → camera
     location = /api/stream {
-        proxy_pass         http://pi-cam-camera:8000/api/stream;
+        proxy_pass         http://camera_app/api/stream;
         proxy_http_version 1.1;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
@@ -20,36 +26,37 @@ server {
         proxy_buffering    off;
     }
 
-    # Bare /api → controller
+    # bare /api → controller
     location = /api {
-        proxy_pass         http://pi-cam-controller:8001/api;
+        proxy_pass         http://controller_app/api;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
     }
 
-    # All other API calls → controller
+    # all other /api/… → controller
     location /api/ {
-        proxy_pass         http://pi-cam-controller:8001/api/;
+        proxy_pass         http://controller_app/api/;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
     }
-    
+
+    # main app → controller
     location / {
-        proxy_pass         http://pi-cam-controller:8001;
+        proxy_pass         http://controller_app;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
     }
 
-    location /static/ { alias /app/static/; }
-
+    location /static/ {
+        alias /app/static/;
+        access_log off;
+        expires 1h;
+    }
 
     location /media/ {
         alias           /app/media/;
-        # mime.types already included above
         add_header      Accept-Ranges bytes;
         expires         1h;
         access_log      off;
     }
-
-
 }

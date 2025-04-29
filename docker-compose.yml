@@ -39,7 +39,7 @@ services:
       - ./.env
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - static_data:/app/static:ro
+      - ./CameraController/static:/app/static:ro
       - media_data:/app/media:ro
     depends_on:
       - pi-cam-controller

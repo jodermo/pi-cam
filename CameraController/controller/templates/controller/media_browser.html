@@ -5,58 +5,88 @@
 
 {% block content %}
 <nav>
-  <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">← Home</a>
-  <a href="{% url 'media_browser' %}" class="{% if request.resolver_match.url_name == 'media_browser' %}active{% endif %}">Live Stream</a>
+  <a href="{% url 'index' %}">← Home</a>
 </nav>
 
 <h1>Media Browser</h1>
 
-<h2>Snapshot</h2>
-<form id="snap-form" method="post">
-  {% csrf_token %}
-  <button type="submit">Take Snapshot</button>
-</form>
+<section>
+  <h2>Snapshots</h2>
+  <form id="snap-form" method="post">
+    {% csrf_token %}
+    <button type="submit">Take Snapshot</button>
+  </form>
+  <div id="photos" class="gallery">Loading…</div>
+</section>
 
-<h2>Captured Images</h2>
-<div id="gallery" class="gallery"></div>
+<section>
+  <h2>Recordings</h2>
+  <button id="reload-videos">Reload Videos</button>
+  <div id="videos" class="gallery">Loading…</div>
+</section>
+
+<section>
+  <h2>Timelapse Frames</h2>
+  <button id="reload-timelapse">Reload Timelapse</button>
+  <div id="timelapse" class="gallery">Loading…</div>
+</section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  async function loadMedia() {
-    const res = await fetch("{% url 'api_media_list' %}");
+  async function loadGallery(apiUrl, containerId, isVideo=false) {
+    const res = await fetch(apiUrl);
     const items = await res.json();
-    const gallery = document.getElementById('gallery');
+    const gallery = document.getElementById(containerId);
     gallery.innerHTML = '';
     if (!items.length) {
-      gallery.textContent = 'No images found.';
+      gallery.textContent = 'None found.';
       return;
     }
     items.forEach(item => {
       const wrapper = document.createElement('div');
-      const img = document.createElement('img');
-      img.src = item.url;
-      img.alt = item.filename;
+      wrapper.className = 'gallery-item';
+      if (isVideo) {
+        const vid = document.createElement('video');
+        vid.src = item.url;
+        vid.controls = true;
+        vid.width = 240;
+        wrapper.appendChild(vid);
+      } else {
+        const img = document.createElement('img');
+        img.src = item.url + '?_=' + Date.now();
+        img.alt = item.filename;
+        wrapper.appendChild(img);
+      }
       const link = document.createElement('a');
       link.href = item.url;
       link.download = item.filename;
       link.textContent = 'Download';
       link.className = 'download';
-      wrapper.appendChild(img);
       wrapper.appendChild(link);
       gallery.appendChild(wrapper);
     });
   }
 
-  document.getElementById('snap-form').onsubmit = async (e) => {
+  document.getElementById('snap-form').onsubmit = async e => {
     e.preventDefault();
     await fetch("{% url 'api_snapshot' %}", {
       method: 'POST',
       headers: {'X-CSRFToken': '{{ csrf_token }}'}
     });
-    loadMedia();
+    loadGallery("{% url 'api_media_list' %}", 'photos');
   };
 
-  window.onload = () => loadMedia();
+  document.getElementById('reload-videos').onclick = () =>
+    loadGallery("{% url 'api_video_list' %}", 'videos', true);
+
+  document.getElementById('reload-timelapse').onclick = () =>
+    loadGallery("{% url 'api_timelapse_list' %}", 'timelapse');
+
+  window.onload = () => {
+    loadGallery("{% url 'api_media_list' %}", 'photos');
+    loadGallery("{% url 'api_video_list' %}", 'videos', true);
+    loadGallery("{% url 'api_timelapse_list' %}", 'timelapse');
+  };
 </script>
 {% endblock %}

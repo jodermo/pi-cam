@@ -1,4 +1,3 @@
-# USBCameraApp/app.py
 import os
 import cv2
 import threading
@@ -11,8 +10,10 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
 
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -26,10 +27,14 @@ if not CAMERA_SOURCES:
     CAMERA_SOURCES = ["/dev/video0"]
 logger.info(f"Configured camera sources: {CAMERA_SOURCES}")
 
+# API configuration
 STREAM_PORT     = int(os.getenv("STREAM_PORT", 8000))
 API_PREFIX      = os.getenv("CAMERA_API_URL", "/api")
 RECONNECT_DELAY = float(os.getenv("RECONNECT_DELAY", 1.0))
+global USING_FALLBACK
+USING_FALLBACK = True
 
+# FastAPI app setup
 app = FastAPI(openapi_prefix=API_PREFIX)
 app.add_middleware(
     CORSMiddleware,
@@ -38,12 +43,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Threading lock and camera handle
 lock        = threading.Lock()
 cap         = None
 start_time  = datetime.utcnow()
-current_idx = 0  # which source we’re using
+current_idx = 0  # index of the active camera source
 
+# ----------------------------------------------------------------------------
+# Camera settings mapping and state storage
+# ----------------------------------------------------------------------------
+CAMERA_PROPS = {
+    "brightness": cv2.CAP_PROP_BRIGHTNESS,
+    "contrast":   cv2.CAP_PROP_CONTRAST,
+    "saturation": cv2.CAP_PROP_SATURATION,
+    "hue":        cv2.CAP_PROP_HUE,
+    "gain":       cv2.CAP_PROP_GAIN,
+    "exposure":   cv2.CAP_PROP_EXPOSURE,
+}
 
+# In-memory store of current camera settings
+settings_state = {}
+
+# Fallback image loading
 FALLBACK_PATH = os.getenv("FALLBACK_IMAGE", "/app/fallback_image.png")
 _fallback_bytes = None
 if Path(FALLBACK_PATH).is_file():
@@ -67,10 +88,10 @@ def open_camera(idx=None):
         current_idx = idx
 
     src = CAMERA_SOURCES[current_idx]
-    global cap
     if cap is not None:
         cap.release()
-        logger.info(f"Released previous camera handle.")
+        logger.info("Released previous camera handle.")
+
     logger.info(f"Opening camera #{current_idx}: {src}")
     cap = cv2.VideoCapture(src)
     if not cap.isOpened():
@@ -78,12 +99,35 @@ def open_camera(idx=None):
         raise RuntimeError(f"Cannot open camera {src}")
     logger.info(f"Camera {src} opened successfully.")
 
+    # Re-apply any saved settings
+    for setting, val in settings_state.items():
+        prop = CAMERA_PROPS.get(setting)
+        if prop is not None:
+            cap.set(prop, val)
+            logger.info(f"Restored camera {setting} → {val}")
+
+
 @app.on_event("startup")
 def startup_event():
+    # Attempt to open the first camera
     try:
         open_camera(0)
     except Exception as e:
         logger.warning(f"Startup failed to open camera: {e}")
+        return
+
+    # Load defaults from environment variables
+    for setting, prop in CAMERA_PROPS.items():
+        envvar = os.getenv(f"CAMERA_{setting.upper()}")
+        if envvar is not None:
+            try:
+                val = int(envvar)
+                cap.set(prop, val)
+                settings_state[setting] = val
+                logger.info(f"Loaded default {setting}={val} from env")
+            except ValueError:
+                logger.warning(f"Ignoring invalid CAMERA_{setting.upper()}={envvar}")
+
 
 @app.on_event("shutdown")
 def shutdown_event():
@@ -92,6 +136,7 @@ def shutdown_event():
         cap.release()
         logger.info("Camera released on shutdown.")
 
+
 def generate_frames():
     """MJPEG frame generator with auto-reconnect, back-off, and fallback."""
     global cap
@@ -99,6 +144,7 @@ def generate_frames():
         try:
             # Serve fallback if camera is down
             if (cap is None or not cap.isOpened()) and _fallback_bytes:
+                USING_FALLBACK = True
                 yield (
                     b'--frame\r\n'
                     b'Content-Type: image/jpeg\r\n\r\n' +
@@ -118,7 +164,8 @@ def generate_frames():
                 logger.warning("Frame capture failed; retrying after delay…")
                 time.sleep(RECONNECT_DELAY)
                 continue
-
+            if ok and frame is not None:
+                USING_FALLBACK = False
             ret, buf = cv2.imencode('.jpg', frame)
             if not ret:
                 logger.error("Failed to JPEG-encode frame")
@@ -156,6 +203,7 @@ def stream():
         media_type='multipart/x-mixed-replace; boundary=frame'
     )
 
+
 @app.get("/health")
 def health_check():
     ok = cap is not None and cap.isOpened()
@@ -165,16 +213,20 @@ def health_check():
         content={
             "status":      "ok" if ok else "error",
             "camera_open": ok,
+            "using_fallback": USING_FALLBACK,
             "uptime_secs": round(uptime,1),
             "current_idx": current_idx,
             "current_src": CAMERA_SOURCES[current_idx],
         }
     )
 
+
+
 @app.get("/cameras")
 def list_cameras():
     """List all configured camera sources and the active index."""
     return {"sources": CAMERA_SOURCES, "active_idx": current_idx}
+
 
 @app.post("/switch/{idx}")
 def switch_camera(idx: int):
@@ -187,30 +239,27 @@ def switch_camera(idx: int):
     except RuntimeError as e:
         raise HTTPException(500, str(e))
 
+
 @app.post("/settings/{setting}")
 def set_setting(setting: str, value: int):
-    props = {
-        "brightness": cv2.CAP_PROP_BRIGHTNESS,
-        "contrast":   cv2.CAP_PROP_CONTRAST,
-        "saturation": cv2.CAP_PROP_SATURATION,
-        "hue":        cv2.CAP_PROP_HUE,
-        "gain":       cv2.CAP_PROP_GAIN,
-        "exposure":   cv2.CAP_PROP_EXPOSURE,
-    }
-    if setting not in props:
+    """Set and persist a camera property."""
+    if setting not in CAMERA_PROPS:
         raise HTTPException(400, "Invalid setting")
     with lock:
-        success = cap.set(props[setting], value)
+        success = cap.set(CAMERA_PROPS[setting], value)
     if not success:
         raise HTTPException(500, "Failed to set setting")
+    # Keep track of latest value
+    settings_state[setting] = value
+
     return {"setting": setting, "value": value}
+
 
 @app.post("/restart")
 def restart_camera():
     """
     Attempt to reopen the current camera source.
-    If it fails, log a warning and continue serving the fallback image,
-    but still return a 200 OK with a fallback status.
+    If it fails, fall back but still return 200 OK.
     """
     try:
         open_camera(current_idx)

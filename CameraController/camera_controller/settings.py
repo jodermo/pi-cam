@@ -22,11 +22,12 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',  # for serving static files
-    'controller',                  # your camera controller app
+    'django.contrib.staticfiles',
+    'controller.apps.ControllerConfig',
 ]
 
 MIDDLEWARE = [
+    'controller.middleware.JsonErrorMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -93,7 +94,7 @@ STATIC_ROOT = BASE_DIR / 'static'
 
 # Media files (user uploads, served by nginx)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

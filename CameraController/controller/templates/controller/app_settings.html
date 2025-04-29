@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Application Settings</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 2em auto; padding: 0 1em; }
+    h1 { color: #333; }
+    form { background: #f9f9f9; padding: 1em; border-radius: 8px; }
+    div { margin-bottom: 1em; }
+    label { display: block; margin-bottom: 0.2em; font-weight: bold; }
+    input[type="number"], input[type="text"], input[type="checkbox"] { width: 100%; max-width: 300px; }
+    button { background: #007bff; color: white; padding: 0.5em 1em; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    a { display: block; margin-top: 2em; }
+  </style>
+</head>
+<body>
+
+<h1>Application Settings</h1>
+
+<form method="post">
+  {% csrf_token %}
+  {% for field in form %}
+    <div>
+      {{ field.label_tag }}
+      {{ field }}
+      {% if field.help_text %}
+        <small>{{ field.help_text }}</small>
+      {% endif %}
+    </div>
+  {% endfor %}
+  <button type="submit">Save Settings</button>
+</form>
+
+<a href="{% url 'index' %}">← Back to dashboard</a>
+
+</body>
+</html>

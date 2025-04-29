@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Timelapse Gallery</title>
+  <style>
+    body { font-family: sans-serif; padding: 1em; max-width: 1000px; margin: auto; }
+    h1, h2 { color: #333; }
+    .gallery { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2em; }
+    .gallery img { width: 300px; height: auto; border: 1px solid #ccc; padding: 4px; }
+    form { margin-bottom: 2em; padding: 1em; background: #f9f9f9; border-radius: 8px; }
+    form div { margin-bottom: 0.8em; }
+    form label { display: inline-block; width: 180px; }
+    form input[type="number"] { width: 5em; }
+    button { background: #28a745; color: white; padding: 0.5em 1em; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #218838; }
+    a { display: block; margin-top: 2em; }
+  </style>
+</head>
+<body>
+
+<h1>Timelapse Gallery</h1>
+
+<h2>Timelapse Settings</h2>
+
+<form method="post">
+  {% csrf_token %}
+  <div>
+    {{ form.enable_timelapse.label_tag }} {{ form.enable_timelapse }}
+  </div>
+  <div>
+    {{ form.timelapse_interval_minutes.label_tag }} {{ form.timelapse_interval_minutes }} minutes
+  </div>
+  <div>
+    {{ form.timelapse_folder.label_tag }} {{ form.timelapse_folder }}
+  </div>
+  <div>
+    {{ form.capture_resolution_width.label_tag }} {{ form.capture_resolution_width }} px
+  </div>
+  <div>
+    {{ form.capture_resolution_height.label_tag }} {{ form.capture_resolution_height }} px
+  </div>
+  <button type="submit">Save Settings</button>
+</form>
+
+<h2>Captured Images</h2>
+
+<div class="gallery">
+  {% for img_url in images %}
+    <div>
+      <img src="{{ img_url }}" alt="Timelapse frame">
+      <a href="{{ img_url }}" download>Download</a>
+    </div>
+  {% empty %}
+    <p>No timelapse images found.</p>
+  {% endfor %}
+</div>
+
+<a href="{% url 'index' %}">← Back to dashboard</a>
+
+</body>
+</html>

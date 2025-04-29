@@ -1,5 +1,10 @@
 Django>=4.2
 dj-database-url
 psycopg2-binary
-requests
 gunicorn
+
+opencv-python-headless>=4.7.0.72
+requests
+apscheduler
+
+python-dotenv

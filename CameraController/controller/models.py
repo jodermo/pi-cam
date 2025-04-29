@@ -34,3 +34,30 @@ class CameraSettings(models.Model):
             f"Brightness={self.brightness}, Contrast={self.contrast}, "
             f"Saturation={self.saturation}, Gain={self.gain}, Exposure={mode}"
         )
+
+
+
+class AppConfigSettings(models.Model):
+    """Globale App-Konfiguration, inkl. Timelapse-Einstellungen."""
+
+    enable_timelapse = models.BooleanField(default=True)
+    timelapse_interval_minutes = models.PositiveIntegerField(default=1)
+
+    timelapse_folder = models.CharField(
+        max_length=255,
+        default='timelapse',
+        help_text="Unterordner von MEDIA_ROOT, in dem Timelapse-Bilder gespeichert werden."
+    )
+
+    capture_resolution_width = models.PositiveIntegerField(default=1280)
+    capture_resolution_height = models.PositiveIntegerField(default=720)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"AppConfig (Timelapse {'ON' if self.enable_timelapse else 'OFF'})"
+
+    class Meta:
+        verbose_name = "App Configuration"
+        verbose_name_plural = "App Configurations"

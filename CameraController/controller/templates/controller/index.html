@@ -1,5 +1,3 @@
-<!-- CameraController/controller/templates/controller/index.html -->
- 
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -56,26 +54,48 @@
     .actions form button:hover {
       background: #1e7e34;
     }
+
+    .camera-error {
+      color: white;
+      background: #d9534f;
+      padding: 0.5em 1em;
+      border-radius: 4px;
+      margin-bottom: 1em;
+    }
   </style>
 </head>
 <body>
   <h1>USB Camera Controller</h1>
-  <!-- Camera selector -->
+
+    <!-- Camera selector -->
   <div class="controls">
     <h2>Choose Camera</h2>
-    <form method="post" action="{% url 'switch_camera' idx=active_index %}">
-      {% csrf_token %}
-      <label for="camera-select">Source:</label>
-      <select id="camera-select" name="idx" onchange="this.form.action='{% url 'switch_camera' idx=0 %}'.replace('0', this.value); this.form.submit();">
-        {% for src in camera_list %}
-          <option value="{{ forloop.counter0 }}"
-            {% if forloop.counter0 == active_index %}selected{% endif %}>
-            {{ src }}
-          </option>
-        {% endfor %}
-      </select>
-    </form>
+
+    {% if camera_list %}
+      <form method="post" id="camera-form" action="{% url 'switch_camera' idx=0 %}">
+        {% csrf_token %}
+        <label for="camera-select">Source:</label>
+        <select id="camera-select" name="idx" onchange="updateCameraForm(this.value);">
+          {% for src in camera_list %}
+            <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>
+              {{ src }}
+            </option>
+          {% endfor %}
+        </select>
+      </form>
+    {% else %}
+      <p>No cameras available.</p>
+    {% endif %}
   </div>
+
+  <script>
+  function updateCameraForm(idx) {
+      const form = document.getElementById('camera-form');
+      form.action = form.action.replace(/switch\/\d+/, 'switch/' + idx);
+      form.submit();
+  }
+  </script>
+
 
   <!-- Live MJPEG stream -->
   <img src="{{ stream_url }}" alt="Live camera stream" />
@@ -83,42 +103,207 @@
   <!-- Camera settings forms -->
   <div class="controls">
     <h2>Adjust Settings</h2>
-    {% for s in settings %}
-      <form method="post" action="{% url 'set_setting' s %}">
-        {% csrf_token %}
-        <label for="id_{{ s }}">{{ s|capfirst }}:</label>
-        <input id="id_{{ s }}" type="number" name="value" required />
-        <button type="submit">Set</button>
-      </form>
-    {% endfor %}
+    {% for setting in settings_fields %}
+    <div class="setting-row" style="margin-bottom: 1em;">
+      <label for="id_{{ setting.name }}">{{ setting.name|capfirst }}:</label>
+    
+      <input id="id_{{ setting.name }}" type="number" min="0" max="255"
+             value="{{ setting.value }}"
+             onchange="syncSlider('{{ setting.name }}', this.value)" />
+    
+      <input id="slider_{{ setting.name }}" type="range" min="0" max="255"
+             value="{{ setting.value }}"
+             onchange="syncInput('{{ setting.name }}', this.value)" />
+    
+      <button onclick="submitSetting('{{ setting.name }}')">Set</button>
+    </div>
+    
+    <script>
+      function syncSlider(settingName, value) {
+          const slider = document.getElementById('slider_' + settingName);
+          if (slider) {
+              slider.value = value;
+          }
+      }
+      
+      function syncInput(settingName, value) {
+          const input = document.getElementById('id_' + settingName);
+          if (input) {
+              input.value = value;
+          }
+      }
+      </script>
+      
+  {% endfor %}
+
+
+    <!-- Auto Exposure Toggle -->
+    <form method="post" action="{% url 'set_setting' 'auto_exposure' %}">
+      {% csrf_token %}
+      <label for="id_auto_exposure">Auto Exposure:</label>
+      <input id="id_auto_exposure" type="checkbox" name="value" value="1" {% if db_settings.auto_exposure %}checked{% endif %} onchange="this.form.submit()" />
+    </form>
   </div>
 
-  <!-- Actions: restart & health check -->
+  <!-- Actions: restart, capture, record & health check -->
   <div class="actions">
     <h2>Actions</h2>
-
-    <!-- Restart camera -->
-    <form method="post" action="{% url 'restart' %}" style="display:inline-block;">
-      {% csrf_token %}
-      <button type="submit">Restart Camera</button>
-    </form>
-
-    <!-- Health check -->
-    <button id="health-btn">Health Check</button>
+  
+    <button onclick="postAction('{% url 'restart' %}')">Restart Camera</button>
+    <button onclick="postAction('{% url 'capture_photo' %}', true)">Capture Photo</button>
+    <button onclick="postAction('{% url 'start_recording' %}')">Start Recording</button>
+    <button onclick="postAction('{% url 'stop_recording' %}')">Stop Recording</button>
+  
+    <!-- Aufnahmeindikator -->
+    <div id="recording-status" style="margin: 1em 0; color: red; font-weight: bold;"></div>
+  
+    <!-- Letztes Video -->
+    <div id="last-video-block"></div>
+  
+    <h3 style="margin-top: 2em;">System Health</h3>
     <pre id="health-output" style="margin-top:1em; background:#f8f9fa; padding:0.5em; border:1px solid #ddd;"></pre>
+    
+  </div>
+  
+  <div id="camera-error"  class="camera-error" style="display:none; color:white; background:#d9534f; padding:0.5em 1em; border-radius:4px; margin-top:1em;"></div>
+  <div id="health-check-error" class="camera-error"  style="display:none; color:white; background:#d9534f; padding:0.5em 1em; border-radius:4px; margin-top:1em;"></div>
+  <div id="camera-recovered" class="camera-error" style="
+    display:none;
+    background: #5cb85c;
+    color: white;
+    padding: 0.5em 1em;
+    border-radius: 4px;
+    margin-top: 1em;">
+    Camera recovered
   </div>
 
   <script>
-    document.getElementById('health-btn').addEventListener('click', function() {
-      fetch("{% url 'health' %}")
-        .then(response => response.json().then(data => {
-          const out = document.getElementById('health-output');
-          out.textContent = JSON.stringify(data, null, 2);
-        }))
-        .catch(err => {
-          document.getElementById('health-output').textContent = 'Error fetching health.';
-        });
+let wasUsingFallback = false;
+function submitSetting(settingName) {
+  const val = document.getElementById('id_' + settingName).value;
+  fetch(`/set/${settingName}/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: `value=${val}`
+  })
+  .then(res => {
+    if (!res.ok) throw new Error(res.statusText);
+    console.log(`Setting '${settingName}' updated to ${val}`);
+  })
+  .catch(err => alert("Failed to set setting: " + err));
+}
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideError(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = '';
+  el.style.display = 'none';
+}
+
+function postAction(url, isPhoto = false) {
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}'
+    }
+  })
+  .then(res => {
+    if (!res.ok) {
+      return res.json().then(err => {
+        const msg = err.error || 'Unknown error';
+        showError('camera-error', msg);
+        throw new Error(msg);
+      });
+    }else{
+      hideError('camera-error');
+    }
+    return isPhoto ? res.blob() : res.json();
+  })
+  .then(data => {
+    document.getElementById('camera-error').textContent = ''; // clear error
+
+    if (isPhoto && data instanceof Blob) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(data);
+      a.download = 'photo.jpg';
+      a.click();
+    } else {
+      if (data.status === 'started') {
+        document.getElementById('recording-status').textContent = '● Recording is active...';
+      }
+      if (data.status === 'stopped' && data.url) {
+        document.getElementById('recording-status').textContent = '';
+        document.getElementById('last-video-block').innerHTML = `
+          <div style="margin: 1em 0;">
+            <strong>Last Recording:</strong><br/>
+            <video src="${data.url}" controls style="width:100%; max-width:600px; margin-top: 0.5em;"></video>
+            <br/>
+            <a href="${data.url}" download>Download MP4</a>
+          </div>`;
+      }
+    }
+  })
+  .catch(err => {
+    console.warn("Action failed:", err);
+  });
+}
+
+function updateHealth() {
+  fetch("{% url 'health' %}")
+    .then(res => res.json())
+    .then(data => {
+      const out = document.getElementById('health-output');
+      out.textContent = JSON.stringify(data, null, 2);
+
+      if (data.using_fallback) {
+        const msg = `Fallback active\n` +
+                    `• Source: ${data.current_src}\n` +
+                    `• Camera open: ${data.camera_open ? "yes" : "no"}\n` +
+                    `• Uptime: ${data.uptime_secs}s`;
+        showError('health-check-error', msg);
+        hideError('camera-recovered');
+      } else {
+        hideError('health-check-error');
+
+        if (wasUsingFallback) {
+          const recoveredEl = document.getElementById('camera-recovered');
+          recoveredEl.style.display = 'block';
+          setTimeout(() => recoveredEl.style.display = 'none', 3000);
+        }
+      }
+
+      wasUsingFallback = data.using_fallback;
+    })
+    .catch(err => {
+      const out = document.getElementById('health-output');
+      const errorBox = document.getElementById('health-check-error');
+
+      const message = `Health check failed.\n` +
+                      `• ${err.name || 'Error'}: ${err.message || err.toString()}`;
+
+      out.textContent = message;
+      showError('health-check-error', message);
+      console.warn("Health check error:", err);
     });
-  </script>
+
+}
+
+// Automatisch alle 5 Sekunden abrufen
+setInterval(updateHealth, 5000);
+
+// Initial beim Laden starten
+document.addEventListener('DOMContentLoaded', updateHealth);
+
+   </script>
+    
 </body>
 </html>

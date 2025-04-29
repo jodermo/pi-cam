@@ -22,7 +22,7 @@ MEDIA/
 # Django staticfiles
 staticfiles/
 static/
-
+!CameraController/controller/static/**/*
 # Logs
 *.log
 *.log.*

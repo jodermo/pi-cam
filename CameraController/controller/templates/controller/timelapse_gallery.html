@@ -4,10 +4,6 @@
 {% block title %}Timelapse Gallery{% endblock %}
 
 {% block content %}
-<nav>
-  <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">← Home</a>
-  <a href="{% url 'timelapse_gallery' %}" class="{% if request.resolver_match.url_name == 'timelapse_gallery' %}active{% endif %}">Timelapse</a>
-</nav>
 
 <h1>Timelapse Gallery</h1>
 
@@ -59,7 +55,8 @@
     const canvas = document.getElementById('timelapse-canvas');
     const ctx = canvas.getContext('2d');
     const playBtn = document.getElementById('play-pause');
-    const speedInput = document.getElementById('speed');
+    const speedNum = document.getElementById('speed-number');
+    const speedSlider = document.getElementById('speed-slider');
     const thumbs = Array.from(document.querySelectorAll('.thumb'));
     const thumbStrip = document.querySelector('.thumbnails');
     let idx = 0, timer = null;
@@ -82,7 +79,7 @@
       timer = setInterval(()=>{
         idx = (idx+1) % urls.length;
         drawFrame(idx);
-      }, +speedInput.value);
+      }, +speedNum.value);
       playBtn.textContent = 'Pause';
     }
     function pause(){
@@ -91,9 +88,17 @@
       playBtn.textContent = 'Play';
     }
     playBtn.onclick = ()=> timer ? pause() : play();
-    speedInput.onchange = ()=> {
+
+    // sync number and slider
+    speedNum.oninput = ()=> {
+      speedSlider.value = speedNum.value;
       if(timer){ pause(); play(); }
     };
+    speedSlider.oninput = ()=> {
+      speedNum.value = speedSlider.value;
+      if(timer){ pause(); play(); }
+    };
+
     thumbs.forEach(t=>{
       t.onclick = ()=> {
         idx = +t.dataset.index;
@@ -101,7 +106,6 @@
       };
     });
 
-    // thumbnail strip nav
     document.querySelector('.thumb-nav.prev').onclick = ()=> {
       thumbStrip.scrollBy({ left: -thumbStrip.clientWidth, behavior: 'smooth' });
     };

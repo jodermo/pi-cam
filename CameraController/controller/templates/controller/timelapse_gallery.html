@@ -11,40 +11,105 @@
 
 <h1>Timelapse Gallery</h1>
 
-<form method="post">
+<form method="post" class="form-panel">
   {% csrf_token %}
-  {% for field in form.visible_fields %}
-    <div class="form-row">
-      {{ field.label_tag }} {{ field }}
-      {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-      {% for err in field.errors %}
-        <div class="error">{{ err }}</div>
-      {% endfor %}
-    </div>
-  {% endfor %}
-  <button type="submit">Save Settings</button>
-</form>
-
-<h2>Timelapse Frames</h2>
-<div id="timelapse-gallery" class="gallery">
-  {% if images %}
-    {% for url in images %}
-      <div class="gallery-item">
-        <img src="{{ url }}?{{ forloop.counter0 }}" alt="timelapse frame {{ forloop.counter }}" />
-        <a href="{{ url }}" download class="download">Download</a>
+  <div class="form-grid">
+    {% for field in form.visible_fields %}
+      <div>
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+        {% for err in field.errors %}<div class="error">{{ err }}</div>{% endfor %}
       </div>
     {% endfor %}
-  {% else %}
-    <p>No timelapse frames yet. The scheduler will capture a new image every {{ form.instance.timelapse_interval_minutes }} minute(s) into “{{ form.instance.timelapse_folder }}”.</p>
-  {% endif %}
-</div>
+    <div>
+      <button type="submit">Save Settings</button>
+    </div>
+  </div>
+</form>
+
+<section class="timelapse-viewer">
+  <div class="player">
+    <canvas id="timelapse-canvas"></canvas>
+    <div class="player-controls">
+      <button id="play-pause">Play</button>
+      <label for="speed">Speed (ms/frame):</label>
+      <input id="speed" type="number" min="50" value="500" />
+    </div>
+  </div>
+
+  <div class="thumbnail-container">
+    <button class="thumb-nav prev">&laquo;</button>
+    <div class="thumbnails">
+      {% for url in images reversed %}
+        <img class="thumb" data-index="{{ forloop.counter0 }}" src="{{ url }}?{{ forloop.counter0 }}" alt="frame {{ forloop.counter }}" />
+      {% endfor %}
+    </div>
+    <button class="thumb-nav next">&raquo;</button>
+  </div>
+</section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  // optional: auto-refresh gallery every minute
-  setInterval(() => {
-    window.location.reload();
-  }, {{ form.instance.timelapse_interval_minutes }} * 60 * 1000);
+  (function(){
+    const urls = [{% for url in images reversed %}"{{ url }}?{{ forloop.counter0 }}",{% endfor %}];
+    const canvas = document.getElementById('timelapse-canvas');
+    const ctx = canvas.getContext('2d');
+    const playBtn = document.getElementById('play-pause');
+    const speedInput = document.getElementById('speed');
+    const thumbs = Array.from(document.querySelectorAll('.thumb'));
+    const thumbStrip = document.querySelector('.thumbnails');
+    let idx = 0, timer = null;
+
+    function resizeCanvas(){
+      const w = canvas.parentElement.clientWidth;
+      canvas.width = w;
+      canvas.height = w * 3/4;
+    }
+    function drawFrame(i){
+      const img = new Image();
+      img.onload = ()=> {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(img, 0,0,canvas.width,canvas.height);
+      };
+      img.src = urls[i];
+      thumbs.forEach(t=> t.classList.toggle('active', +t.dataset.index===i));
+    }
+    function play(){
+      timer = setInterval(()=>{
+        idx = (idx+1) % urls.length;
+        drawFrame(idx);
+      }, +speedInput.value);
+      playBtn.textContent = 'Pause';
+    }
+    function pause(){
+      clearInterval(timer);
+      timer = null;
+      playBtn.textContent = 'Play';
+    }
+    playBtn.onclick = ()=> timer ? pause() : play();
+    speedInput.onchange = ()=> {
+      if(timer){ pause(); play(); }
+    };
+    thumbs.forEach(t=>{
+      t.onclick = ()=> {
+        idx = +t.dataset.index;
+        drawFrame(idx);
+      };
+    });
+
+    // thumbnail strip nav
+    document.querySelector('.thumb-nav.prev').onclick = ()=> {
+      thumbStrip.scrollBy({ left: -thumbStrip.clientWidth, behavior: 'smooth' });
+    };
+    document.querySelector('.thumb-nav.next').onclick = ()=> {
+      thumbStrip.scrollBy({ left: thumbStrip.clientWidth, behavior: 'smooth' });
+    };
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    drawFrame(0);
+  })();
 </script>
 {% endblock %}

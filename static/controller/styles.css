@@ -247,6 +247,81 @@ a.back-link:hover {
   text-decoration: underline;
 }
 
+
+/* Timelapse Viewer */
+.timelapse-viewer {
+  margin-top: var(--spacing-lg);
+}
+
+.player {
+  position: relative;
+  background: var(--clr-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+#timelapse-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--clr-panel);
+}
+
+.player-controls button {
+  flex-shrink: 0;
+}
+
+.thumbnail-container {
+  display: flex;
+  align-items: center;
+  margin-top: var(--spacing-md);
+}
+
+.thumb-nav {
+  background: var(--clr-primary);
+  color: #fff;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+  cursor: pointer;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+}
+
+.thumb-nav:hover {
+  background: var(--clr-primary-hover);
+}
+
+.thumbnails {
+  display: flex;
+  overflow-x: auto;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) 0;
+  margin: 0 var(--spacing-sm);
+  scroll-behavior: smooth;
+}
+
+.thumb {
+  width: 120px;
+  height: auto;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+}
+
+.thumb.active {
+  border-color: var(--clr-accent);
+}
+
+
+
 /*--------------------------------------
  11. Responsive Adjustments
 ---------------------------------------*/

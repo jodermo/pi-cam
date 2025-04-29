@@ -139,7 +139,7 @@ def index(request):
         last_video_url = settings.MEDIA_URL.rstrip('/') + '/' + rel
 
     return render(request, 'controller/index.html', {
-        'stream_url': STREAM_URL,
+        'stream_url': STREAM_PATH,
         'settings_fields': settings_list,
         'db_settings': db_settings,
         'camera_list': camera_list,

@@ -24,7 +24,6 @@
 {% block scripts %}
 <script>
   async function loadMedia() {
-    // fetch list of media items from the Django API
     const res = await fetch("{% url 'api_media_list' %}");
     const items = await res.json();
     const gallery = document.getElementById('gallery');
@@ -36,7 +35,6 @@
     items.forEach(item => {
       const wrapper = document.createElement('div');
       const img = document.createElement('img');
-      // use Django-served media URL
       img.src = item.url;
       img.alt = item.filename;
       const link = document.createElement('a');
@@ -59,6 +57,6 @@
     loadMedia();
   };
 
-  window.onload = loadMedia;
+  window.onload = () => loadMedia();
 </script>
 {% endblock %}

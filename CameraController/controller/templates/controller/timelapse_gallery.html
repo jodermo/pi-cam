@@ -18,34 +18,50 @@
   <button type="submit">Save Settings</button>
 </form>
 
-<div class="gallery">
-  {% if images %}
-    {% for img in images %}
-      <div>
-        <img src="{{ img.url }}" alt="Timelapse frame">
-        <a href="{{ img.url }}" download class="download">Download</a>
-      </div>
-    {% endfor %}
-  {% else %}
-    <p>No timelapse images found.</p>
-  {% endif %}
-</div>
-
-<a href="{% url 'index' %}" class="back-link">← Back to dashboard</a>
+<h2>Timelapse Frames</h2>
+<div id="timelapse-gallery" class="gallery"></div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+  async function loadTimelapse() {
+    const res = await fetch("{% url 'api_timelapse_list' %}");
+    const items = await res.json();
+    const gallery = document.getElementById('timelapse-gallery');
+    gallery.innerHTML = '';
+    if (!items.length) {
+      gallery.textContent = 'No timelapse images found.';
+      return;
+    }
+    items.forEach(item => {
+      const wrapper = document.createElement('div');
+      const img = document.createElement('img');
+      img.src = item.url;
+      img.alt = item.filename;
+      const link = document.createElement('a');
+      link.href = item.url;
+      link.download = item.filename;
+      link.textContent = 'Download';
+      link.className = 'download';
+      wrapper.appendChild(img);
+      wrapper.appendChild(link);
+      gallery.appendChild(wrapper);
+    });
+  }
+
   document.getElementById('timelapse-form').onsubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    await fetch("{% url 'timelapse_settings' %}", {
+    await fetch("{% url 'api_timelapse_settings' %}", {
       method: 'POST',
       headers: {'X-CSRFToken': '{{ csrf_token }}'},
       body: formData
     });
-    // reload gallery after saving
-    window.location.reload();
+    loadTimelapse();
+  };
+
+  window.onload = () => {
+    loadTimelapse();
   };
 </script>
 {% endblock %}

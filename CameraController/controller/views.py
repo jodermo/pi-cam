@@ -406,3 +406,56 @@ def media_browser(request):
         if fn.lower().endswith(('.jpg','jpeg','png'))
     ]
     return render(request, 'controller/media_browser.html', {'images': images})
+
+
+@login_required
+def media_list_api(request):
+    """
+    Return JSON list of filenames in MEDIA_ROOT/photos (or root) for the gallery.
+    """
+    # directory where snapshots are stored
+    photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
+    # ensure it exists
+    if not os.path.isdir(photos_dir):
+        return JsonResponse([], safe=False)
+   # list image files
+    files = sorted(
+        [f for f in os.listdir(photos_dir) if f.lower().endswith(('.jpg','.jpeg','.png'))],
+        reverse=True
+    )
+    # return JSON array of { filename }
+    data = [{'filename': f} for f in files]
+    return JsonResponse(data, safe=False)
+
+
+@login_required
+def timelapse_list_api(request):
+    """
+    Return JSON list of timelapse frame URLs under MEDIA_ROOT/<timelapse_folder>/
+    """
+    from .models import AppConfigSettings
+
+    # Load configured folder name
+    config, _ = AppConfigSettings.objects.get_or_create(pk=1)
+    folder = config.timelapse_folder or 'timelapse'
+
+    # Compute full directory path
+    timelapse_dir = os.path.join(settings.MEDIA_ROOT, folder)
+    if not os.path.isdir(timelapse_dir):
+        return JsonResponse([], safe=False)
+
+    # Gather image files
+    files = sorted(
+        [f for f in os.listdir(timelapse_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))],
+        reverse=True
+    )
+
+    # Build full URL for each
+    data = [
+        {
+            'filename': f,
+            'url': settings.MEDIA_URL.rstrip('/') + f'/{folder}/{f}'
+        }
+        for f in files
+    ]
+    return JsonResponse(data, safe=False)

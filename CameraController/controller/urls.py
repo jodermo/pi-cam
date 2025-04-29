@@ -27,6 +27,7 @@ urlpatterns = [
     path('camera-event/', views.camera_event,    name='camera_event'),
     path('api/snapshot/', views.capture_photo, name='api_snapshot'),
     path('api/timelapse/', views.timelapse_list_api, name='api_timelapse_list'),
+    path('api/videos/',       views.video_list_api,   name='api_video_list'),
     path('api/media/',    views.media_list_api, name='api_media_list'),
 
     path('timelapse-gallery/', views.timelapse_gallery, name='timelapse_gallery'),

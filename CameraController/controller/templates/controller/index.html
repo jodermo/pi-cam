@@ -62,11 +62,17 @@
       border-radius: 4px;
       margin-bottom: 1em;
     }
+    nav { background: #333; color: #fff; padding: 0.5em; }
+    nav a { color: #fff; margin-right: 1em; text-decoration: none; }
   </style>
 </head>
 <body>
   <h1>USB Camera Controller</h1>
-
+  <nav>
+    <a href="/stream/">Live Stream</a>
+    <a href="/api/media">Media List (JSON)</a>
+    <button id="snap">Take Snapshot</button>
+  </nav>
     <!-- Camera selector -->
   <div class="controls">
     <h2>Choose Camera</h2>

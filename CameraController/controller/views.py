@@ -179,47 +179,56 @@ def set_setting(request, setting):
 
     return JsonResponse({'status': 'ok', 'setting': setting, 'value': val})
 
-
 @login_required
 def capture_photo(request):
     """
-    Capture one frame from the camera MJPEG stream (internal URL),
+    Capture one fresh frame from the camera MJPEG stream (internal URL),
     persist it under MEDIA_ROOT/photos/, and return it as a JPEG download.
     """
-    # open the MJPEG/video stream using the internal service address
+    # 1) Open the MJPEG stream from the internal camera service
     cap = cv2.VideoCapture(INTERNAL_STREAM_URL)
     if not cap.isOpened():
-        return JsonResponse({'error': f'Cannot open stream at {INTERNAL_STREAM_URL}'}, status=503)
+        return JsonResponse(
+            {'error': f'Cannot open stream at {INTERNAL_STREAM_URL}'},
+            status=503
+        )
 
+    # 2) Flush stale/buffered frames so we get a current image
+    for _ in range(5):
+        cap.read()
+
+    # 3) Read the next (fresh) frame
     ret, frame = cap.read()
     cap.release()
-
     if not ret or frame is None:
         return JsonResponse({'error': 'Could not read frame from stream'}, status=500)
 
-    # ensure the photos folder exists
+    # 4) Ensure the photos directory exists
     photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
     try:
         os.makedirs(photos_dir, exist_ok=True)
     except Exception as e:
-        return JsonResponse({'error': f'Failed to create photos directory: {e}'}, status=500)
+        return JsonResponse(
+            {'error': f'Failed to create photos directory: {e}'},
+            status=500
+        )
 
-    # timestamped filename
+    # 5) Build a UTC-timestamped filename and save to disk
     fname = datetime.utcnow().strftime('photo_%Y%m%d_%H%M%S.jpg')
     fpath = os.path.join(photos_dir, fname)
-
-    # write out
     if not cv2.imwrite(fpath, frame):
         return JsonResponse({'error': 'Failed to write photo to disk'}, status=500)
 
-    # encode for response
+    # 6) Encode the same frame into memory for immediate response
     ret, buf = cv2.imencode('.jpg', frame)
     if not ret:
         return JsonResponse({'error': 'Failed to encode JPEG'}, status=500)
 
+    # 7) Send the JPEG back as a file download
     response = HttpResponse(buf.tobytes(), content_type='image/jpeg')
     response['Content-Disposition'] = f'attachment; filename="{fname}"'
     return response
+
 
 @login_required
 def start_recording(request):

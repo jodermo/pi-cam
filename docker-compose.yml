@@ -27,7 +27,7 @@ services:
       - "8001"
     volumes:
       - media_data:/app/media
-      - static_data:/app/controller/static
+      - static_data:/app/static
 
   pi-cam-nginx:
     build: ./nginx

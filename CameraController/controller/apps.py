@@ -70,6 +70,7 @@ def capture_timelapse_frame():
         logger.exception("[Timelapse] unexpected error during capture")
 
 
+
 class ControllerConfig(AppConfig):
     name = 'controller'
     default_auto_field = 'django.db.models.BigAutoField'
@@ -77,18 +78,26 @@ class ControllerConfig(AppConfig):
     def ready(self):
         # defer model import until apps are loaded
         from .models import AppConfigSettings
+        # import the DB exceptions we’ll catch
+        from django.db.utils import ProgrammingError, OperationalError
 
-        # schedule only once
-        config = AppConfigSettings.objects.first()
+        try:
+            config = AppConfigSettings.objects.first()
+        except (ProgrammingError, OperationalError) as e:
+            logger.warning(f"[Timelapse] cannot read AppConfigSettings yet: {e!r}")
+            return
+
         if config and config.enable_timelapse:
             interval = config.timelapse_interval_minutes or 1
             logger.info(f"[Timelapse] scheduling capture every {interval} minute(s)")
-            scheduler.add_job(
-                capture_timelapse_frame,
-                trigger=IntervalTrigger(minutes=interval),
-                id='timelapse_job',
-                replace_existing=True
-            )
-            scheduler.start()
+            # ensure we don’t double-start
+            if not scheduler.get_job('timelapse_job'):
+                scheduler.add_job(
+                    func=capture_timelapse_frame,
+                    trigger=IntervalTrigger(minutes=interval),
+                    id='timelapse_job',
+                    replace_existing=True,
+                )
+                scheduler.start()
         else:
             logger.info("[Timelapse] not scheduling – timelapse disabled or no config found")

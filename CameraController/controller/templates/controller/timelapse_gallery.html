@@ -4,62 +4,47 @@
 {% block title %}Timelapse Gallery{% endblock %}
 
 {% block content %}
+<nav>
+  <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">← Home</a>
+  <a href="{% url 'timelapse_gallery' %}" class="{% if request.resolver_match.url_name == 'timelapse_gallery' %}active{% endif %}">Timelapse</a>
+</nav>
+
 <h1>Timelapse Gallery</h1>
 
-<form method="post" id="timelapse-form" action="{% url 'timelapse_gallery' %}">
+<form method="post">
   {% csrf_token %}
   {% for field in form.visible_fields %}
-    <div class="form-group">
+    <div class="form-row">
       {{ field.label_tag }} {{ field }}
       {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-      {% for err in field.errors %}<div class="error">{{ err }}</div>{% endfor %}
+      {% for err in field.errors %}
+        <div class="error">{{ err }}</div>
+      {% endfor %}
     </div>
   {% endfor %}
   <button type="submit">Save Settings</button>
 </form>
 
 <h2>Timelapse Frames</h2>
-<div id="timelapse-gallery" class="gallery"></div>
+<div id="timelapse-gallery" class="gallery">
+  {% if images %}
+    {% for url in images %}
+      <div class="gallery-item">
+        <img src="{{ url }}?{{ forloop.counter0 }}" alt="timelapse frame {{ forloop.counter }}" />
+        <a href="{{ url }}" download class="download">Download</a>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p>No timelapse frames yet. The scheduler will capture a new image every {{ form.instance.timelapse_interval_minutes }} minute(s) into “{{ form.instance.timelapse_folder }}”.</p>
+  {% endif %}
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  async function loadTimelapse() {
-    const res = await fetch("{% url 'api_timelapse_list' %}");
-    const items = await res.json();
-    const gallery = document.getElementById('timelapse-gallery');
-    gallery.innerHTML = '';
-    if (!items.length) {
-      gallery.textContent = 'No timelapse images found.';
-      return;
-    }
-    items.forEach(item => {
-      const wrapper = document.createElement('div');
-      const img = document.createElement('img');
-      img.src = item.url;
-      img.alt = item.filename;
-      const link = document.createElement('a');
-      link.href = item.url;
-      link.download = item.filename;
-      link.textContent = 'Download';
-      link.className = 'download';
-      wrapper.appendChild(img);
-      wrapper.appendChild(link);
-      gallery.appendChild(wrapper);
-    });
-  }
-
-  document.getElementById('timelapse-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    await fetch("{% url 'timelapse_gallery' %}", {
-      method: 'POST',
-      headers: {'X-CSRFToken': '{{ csrf_token }}'},
-      body: formData
-    });
-    loadTimelapse();
-  };
-
-  window.onload = () => loadTimelapse();
+  // optional: auto-refresh gallery every minute
+  setInterval(() => {
+    window.location.reload();
+  }, {{ form.instance.timelapse_interval_minutes }} * 60 * 1000);
 </script>
 {% endblock %}

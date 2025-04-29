@@ -1,68 +1,95 @@
-#!/usr/bin/env sh
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Apply migrations and collect static files
+#-------------------------------------------------------------------------------
+# Docker entrypoint: apply migrations, collect static, create defaults, then launch
+#-------------------------------------------------------------------------------
 
-echo "Creating migrations for all apps…"
+# Function: wait for database to be ready
+wait_for_db() {
+  local host port
+  host=$(python - <<'PYCODE'
+import os; print(os.getenv('DB_HOST', 'localhost'))
+PYCODE
+  )
+  port=$(python - <<'PYCODE'
+import os; print(os.getenv('DB_PORT', '5432'))
+PYCODE
+  )
+  echo "Waiting for database at $host:$port..."
+  until pg_isready -h "$host" -p "$port" >/dev/null 2>&1; do
+    printf '.'
+    sleep 1
+  done
+  echo "Database is up"
+}
+
+# Wait for DB
+wait_for_db
+
+#-------------------------------------------------------------------------------
+# Django management commands
+#-------------------------------------------------------------------------------
+echo "Making migrations…"
 python manage.py makemigrations --noinput
 
-echo "Applying database migrations…"
+echo "Applying migrations…"
 python manage.py migrate --noinput
 
 echo "Collecting static files…"
 python manage.py collectstatic --noinput
 
-# Auto-create Django superuser from .env
-if [ -n "$ADMIN_NAME" ] && [ -n "$ADMIN_PASSWORD" ]; then
-  echo "Checking for existing superuser '$ADMIN_NAME'…"
+#-------------------------------------------------------------------------------
+# Helper: run a Django shell snippet
+run_shell() {
   python manage.py shell <<EOF
-import os
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-username = os.getenv('ADMIN_NAME')
-password = os.getenv('ADMIN_PASSWORD')
-email    = os.getenv('ADMIN_EMAIL', '')
-
-if not User.objects.filter(username=username).exists():
-    print("Creating superuser:", username)
-    User.objects.create_superuser(username=username, email=email, password=password)
-else:
-    print(f"Superuser '{username}' already exists, skipping.")
+$1
 EOF
+}
+
+#-------------------------------------------------------------------------------
+# Create superuser if credentials provided
+#-------------------------------------------------------------------------------
+if [[ -n "${ADMIN_NAME-}" && -n "${ADMIN_PASSWORD-}" ]]; then
+  echo "Ensuring superuser '$ADMIN_NAME' exists…"
+  run_shell "import os; from django.contrib.auth import get_user_model
+User = get_user_model()
+if not User.objects.filter(username=os.getenv('ADMIN_NAME')).exists():
+    User.objects.create_superuser(
+        username=os.getenv('ADMIN_NAME'),
+        email=os.getenv('ADMIN_EMAIL', ''),
+        password=os.getenv('ADMIN_PASSWORD')
+    ) and print('Superuser created.')
+else:
+    print('Superuser exists, skipping.')"
 else
   echo "ADMIN_NAME or ADMIN_PASSWORD not set; skipping superuser creation."
 fi
 
-# Auto-create default CameraSettings if none exist
-echo "Ensuring default CameraSettings exist…"
-python manage.py shell <<EOF
-from controller.models import CameraSettings
+#-------------------------------------------------------------------------------
+# Create default CameraSettings and AppConfigSettings if absent
+#-------------------------------------------------------------------------------
 
-if not CameraSettings.objects.exists():
-    CameraSettings.objects.create()
-    print("Default CameraSettings created.")
-else:
-    print("CameraSettings already present, skipping.")
-EOF
+echo "Ensuring default CameraSettings…"
+run_shell "from controller.models import CameraSettings
+CameraSettings.objects.get_or_create(id=1)
+print('CameraSettings OK')"
 
-# Auto-create default AppConfigSettings if none exist
-echo "Ensuring default AppConfigSettings exist…"
-python manage.py shell <<EOF
-from controller.models import AppConfigSettings
+echo "Ensuring default AppConfigSettings…"
+run_shell "from controller.models import AppConfigSettings
+AppConfigSettings.objects.get_or_create(
+    id=1,
+    defaults={
+        'enable_timelapse': True,
+        'timelapse_interval_minutes': 1,
+        'timelapse_folder': 'timelapse',
+        'capture_resolution_width': 1280,
+        'capture_resolution_height': 720,
+    }
+)
+print('AppConfigSettings OK')"
 
-if not AppConfigSettings.objects.exists():
-    AppConfigSettings.objects.create(
-        enable_timelapse=True,
-        timelapse_interval_minutes=1,
-        timelapse_folder='timelapse',
-        capture_resolution_width=1280,
-        capture_resolution_height=720,
-    )
-    print("Default AppConfigSettings created.")
-else:
-    print("AppConfigSettings already present, skipping.")
-EOF
-
-# Finally launch the app
+#-------------------------------------------------------------------------------
+# Exec the container command (e.g. start server)
+#-------------------------------------------------------------------------------
 exec "$@"

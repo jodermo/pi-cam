@@ -65,10 +65,13 @@
       if (isVideo) {
         const vid = document.createElement('video');
         vid.controls = true;
-        const src = document.createElement('source');
-        src.src  = item.url;
-        src.type = 'video/mp4';
-        vid.appendChild(src);
+        fetch(item.url)
+          .then(res => res.arrayBuffer())
+          .then(buf => {
+              const blob = new Blob([buf], { type: 'video/mp4' });
+              vid.src = URL.createObjectURL(blob);
+          })
+          .catch(err => console.error('video fetch failed', err));
         wrapper.appendChild(vid);
       } else {
         const img = document.createElement('img');

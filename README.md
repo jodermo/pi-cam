@@ -1,14 +1,43 @@
-Pi USB Camera Controller
+# pi-cam
+
+A Docker-powered Raspberry Pi camera solution that lets you:
+
+- **Stream & control** a USB or CSI camera via a simple web UI  
+- **Capture photos**, record video, and schedule timelapse sequences  
+- **Browse, download, and delete** media in an integrated gallery  
+- **Secure** your setup with Let’s Encrypt SSL and environment-driven configuration  
+- **Persist** data in PostgreSQL and store media on the host via Docker volumes  
+
+Everything runs in containers—just configure your `.env`, plug in a camera, and deploy with `docker-compose up -d`.
 
 
-Quick Start
+## Quick Start
 
-Ensure Certbot certs are present under /etc/letsencrypt on the host.
+1.  **Clone the repo**  
+    ```bash
+    git clone https://github.com/jodermo/pi-cam.git
+    cd pi-cam
+    ```
 
-Launch:
-```bash
-docker-compose up --build -d
-```
+2. **Configure** 
+    - Copy .env.example to .env and edit your domain, database credentials, camera device, etc.
+    - (If using HTTPS) obtain certificates with Certbot and set SSL_ACTIVE=true.
+
+3. **Build & run**
+    ```bash
+    docker-compose up -d --build
+    ```
+
+4. **Configure** 
+    - Camera stream & controls: http://<YOUR_DOMAIN_OR_PI_IP>/
+    - Timelapse & media gallery: via the top-nav links in the web UI.
+
+5. **Configure** 
+    ```bash
+    docker-compose logs -f        # view logs
+    docker-compose down           # stop
+    docker-compose up -d          # restart in background
+    ```
 
 
 ## Configutration
@@ -46,7 +75,9 @@ services:
 <br>
 <br>
 
-## Certbot
+# Some Helpfull Stuff:
+
+### Certbot
 
 #### Install Certbot for SSL Certificates
 
@@ -99,7 +130,7 @@ sudo certbot certonly --standalone -d your-domain -d www.your-domain.com
 <br>
 <br>
 
-## Docker and Docker-Compose
+### Docker and Docker-Compose
 
 #### Install Docker and Docker-Compose:
 
@@ -143,7 +174,7 @@ sudo certbot certonly --standalone -d your-domain -d www.your-domain.com
 <br>
 <br>
 
-#### Docker cleaning: 
+### Docker cleaning: 
 
 ```bash
 # 1. Stop all running containers

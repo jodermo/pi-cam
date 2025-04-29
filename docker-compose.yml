@@ -4,8 +4,8 @@ services:
   pi-cam-camera:
     build: ./USBCameraApp
     restart: always
-    devices:
-      - "/dev/video0:/dev/video0"
+    # devices:
+      # - "/dev/video0:/dev/video0"
     env_file:
       - ./.env
     environment:

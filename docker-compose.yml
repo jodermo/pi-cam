@@ -27,7 +27,7 @@ services:
       - "8001"
     volumes:
       - media_data:/app/media
-      - static_data:/app/static
+      - static_data:/app/controller/static
 
   pi-cam-nginx:
     build: ./nginx
@@ -39,7 +39,7 @@ services:
       - ./.env
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - ./CameraController/controller/static:/app/static:ro
+      - ./CameraController/controller/static:/app/controller/static:ro
       - media_data:/app/media:ro
     depends_on:
       - pi-cam-controller

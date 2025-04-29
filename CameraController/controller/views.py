@@ -131,9 +131,11 @@ def index(request):
 
     is_recording = _recording_thread is not None and _recording_thread.is_alive()
     last_video_url = None
+
     if _recording_path and not is_recording:
         rel = os.path.relpath(_recording_path, getattr(settings, 'MEDIA_ROOT', ''))
-        last_video_url = settings.MEDIA_URL.rstrip('/') + '/' + rel.replace('\\', '/')
+        rel = rel.replace('\\', '/')
+        last_video_url = settings.MEDIA_URL.rstrip('/') + '/' + rel
 
     return render(request, 'controller/index.html', {
         'stream_url': STREAM_URL,
@@ -157,37 +159,25 @@ def set_setting(request, setting):
     if raw is None:
         return JsonResponse({'error': 'Missing value'}, status=400)
 
-    val = True if setting == 'auto_exposure' and raw in ['on', 'true', '1'] else None
-
-    if val is None and setting != 'auto_exposure':
+    if setting == 'auto_exposure':
+        val = raw.lower() in ['on', 'true', '1']
+    else:
         try:
             val = int(raw)
         except (ValueError, TypeError):
-            return JsonResponse({'error': 'Bad value'}, status=400)
-
-
-
-    raw = request.POST.get('value')
-    val = True if setting == 'auto_exposure' and raw in ['on', 'true', '1'] else None
-
-    if val is None and setting != 'auto_exposure':
-        try:
-            val = int(raw)
-        except:
             return HttpResponseBadRequest('Bad value')
 
     settings_obj, _ = CameraSettings.objects.get_or_create(pk=1)
-
     if setting == 'exposure':
         settings_obj.manual_exposure = val
     elif setting == 'auto_exposure':
         settings_obj.auto_exposure = val
     else:
         setattr(settings_obj, setting, val)
-
     settings_obj.save()
 
     return JsonResponse({'status': 'ok', 'setting': setting, 'value': val})
+
 
 
 
@@ -240,26 +230,42 @@ def capture_photo(request):
 @login_required
 def start_recording(request):
     global _recording_thread, _recording_path
-    if request.method!='POST': return HttpResponseBadRequest('POST only')
-    if not _recording_thread or not _recording_thread.is_alive():
-        return JsonResponse({'error': 'Not recording'}, status=500)
+    if request.method != 'POST':
+        return HttpResponseBadRequest('POST only')
+
+    if _recording_thread and _recording_thread.is_alive():
+        return JsonResponse({'error': 'Already recording'}, status=400)
+
+    # ensure the videos folder exists
+    videos_dir = os.path.join(settings.MEDIA_ROOT, 'videos')
+    os.makedirs(videos_dir, exist_ok=True)
+
+    # timestamped filename
     fname = datetime.utcnow().strftime('stream_%Y%m%d_%H%M%S.mp4')
-    outdir = getattr(settings,'MEDIA_ROOT', tempfile.gettempdir())
-    _recording_path = os.path.join(outdir, fname)
+    _recording_path = os.path.join(videos_dir, fname)
+
     _recording_thread = StreamRecorder(STREAM_URL, _recording_path)
     _recording_thread.start()
-    return JsonResponse({'status':'started'})
+    return JsonResponse({'status': 'started'})
+
+
 
 @login_required
 def stop_recording(request):
     global _recording_thread, _recording_path
-    if request.method!='POST': return HttpResponseBadRequest('POST only')
-    if not _recording_thread or not _recording_thread.is_alive(): return HttpResponseServerError('Not recording')
-    _recording_thread.stop_event.set(); _recording_thread.join()
-    rel = os.path.relpath(_recording_path, getattr(settings,'MEDIA_ROOT', ''))
-    url = settings.MEDIA_URL.rstrip('/')+'/'+rel.replace('\\','/')
-    return JsonResponse({'status':'stopped','url':url})
+    if request.method != 'POST':
+        return HttpResponseBadRequest('POST only')
+    if not _recording_thread or not _recording_thread.is_alive():
+        return HttpResponseServerError('Not recording')
 
+    _recording_thread.stop_event.set()
+    _recording_thread.join()
+
+    # build URL under /media/videos
+    rel = os.path.relpath(_recording_path, getattr(settings, 'MEDIA_ROOT', ''))
+    rel = rel.replace('\\', '/')
+    url = settings.MEDIA_URL.rstrip('/') + '/' + rel
+    return JsonResponse({'status': 'stopped', 'url': url})
 
 
 
@@ -420,52 +426,44 @@ def media_browser(request):
 
 @login_required
 def media_list_api(request):
-    """
-    Return JSON list of filenames in MEDIA_ROOT/photos (or root) for the gallery.
-    """
-    # directory where snapshots are stored
     photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
-    # ensure it exists
     if not os.path.isdir(photos_dir):
         return JsonResponse([], safe=False)
-   # list image files
+
     files = sorted(
         [f for f in os.listdir(photos_dir) if f.lower().endswith(('.jpg','.jpeg','.png'))],
         reverse=True
     )
-    # return JSON array of { filename }
-    data = [{'filename': f} for f in files]
+
+    data = [
+        {
+            'filename': f,
+            'url': settings.MEDIA_URL.rstrip('/') + '/photos/' + f
+        }
+        for f in files
+    ]
     return JsonResponse(data, safe=False)
 
 
 @login_required
 def timelapse_list_api(request):
-    """
-    Return JSON list of timelapse frame URLs under MEDIA_ROOT/<timelapse_folder>/
-    """
-    from .models import AppConfigSettings
-
-    # Load configured folder name
     config, _ = AppConfigSettings.objects.get_or_create(pk=1)
     folder = config.timelapse_folder or 'timelapse'
-
-    # Compute full directory path
     timelapse_dir = os.path.join(settings.MEDIA_ROOT, folder)
     if not os.path.isdir(timelapse_dir):
         return JsonResponse([], safe=False)
 
-    # Gather image files
     files = sorted(
         [f for f in os.listdir(timelapse_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))],
         reverse=True
     )
 
-    # Build full URL for each
     data = [
         {
             'filename': f,
-            'url': settings.MEDIA_URL.rstrip('/') + f'/{folder}/{f}'
+            'url': settings.MEDIA_URL.rstrip('/') + '/' + folder + '/' + f
         }
         for f in files
     ]
     return JsonResponse(data, safe=False)
+

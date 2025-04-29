@@ -16,25 +16,40 @@
     {% csrf_token %}
     <button type="submit">Take Snapshot</button>
   </form>
+  <button id="delete-all-photos" class="delete-all">Delete All Photos</button>
   <div id="photos" class="gallery">Loading…</div>
 </section>
 
 <section>
   <h2>Recordings</h2>
   <button id="reload-videos">Reload Videos</button>
+  <button id="delete-all-videos" class="delete-all">Delete All Videos</button>
   <div id="videos" class="gallery">Loading…</div>
 </section>
 
 <section>
   <h2>Timelapse Frames</h2>
   <button id="reload-timelapse">Reload Timelapse</button>
+  <button id="delete-all-timelapse" class="delete-all">Delete All Timelapse</button>
   <div id="timelapse" class="gallery">Loading…</div>
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  async function loadGallery(apiUrl, containerId, isVideo=false) {
+  async function sendDelete(url) {
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert('Delete failed: ' + (err.error || res.statusText));
+    }
+    return res;
+  }
+
+  async function loadGallery(apiUrl, containerId, isVideo=false, baseDeleteUrl) {
     const res = await fetch(apiUrl);
     const items = await res.json();
     const gallery = document.getElementById(containerId);
@@ -46,27 +61,40 @@
     items.forEach(item => {
       const wrapper = document.createElement('div');
       wrapper.className = 'gallery-item';
+
       if (isVideo) {
         const vid = document.createElement('video');
-      vid.controls = true;
-
-      const src = document.createElement('source');
-      src.src  = item.url;
-      src.type = 'video/mp4';
-
-      vid.appendChild(src);
+        vid.controls = true;
+        const src = document.createElement('source');
+        src.src  = item.url;
+        src.type = 'video/mp4';
+        vid.appendChild(src);
+        wrapper.appendChild(vid);
       } else {
         const img = document.createElement('img');
         img.src = item.url + '?_=' + Date.now();
         img.alt = item.filename;
         wrapper.appendChild(img);
       }
+
       const link = document.createElement('a');
       link.href = item.url;
       link.download = item.filename;
       link.textContent = 'Download';
       link.className = 'download';
       wrapper.appendChild(link);
+
+      const del = document.createElement('button');
+      del.textContent = 'Delete';
+      del.className = 'delete';
+      del.onclick = async () => {
+        if (confirm(`Delete ${item.filename}?`)) {
+          await sendDelete(`${baseDeleteUrl}/${item.filename}/`);
+          loadGallery(apiUrl, containerId, isVideo, baseDeleteUrl);
+        }
+      };
+      wrapper.appendChild(del);
+
       gallery.appendChild(wrapper);
     });
   }
@@ -77,19 +105,40 @@
       method: 'POST',
       headers: {'X-CSRFToken': '{{ csrf_token }}'}
     });
-    loadGallery("{% url 'api_media_list' %}", 'photos');
+    loadGallery("{% url 'api_media_list' %}", 'photos', false, '/api/photos');
+  };
+
+  document.getElementById('delete-all-photos').onclick = async () => {
+    if (confirm('Delete all photos?')) {
+      await sendDelete('/api/photos/');
+      loadGallery("{% url 'api_media_list' %}", 'photos', false, '/api/photos');
+    }
   };
 
   document.getElementById('reload-videos').onclick = () =>
-    loadGallery("{% url 'api_video_list' %}", 'videos', true);
+    loadGallery("{% url 'api_video_list' %}", 'videos', true, '/api/videos');
+
+  document.getElementById('delete-all-videos').onclick = async () => {
+    if (confirm('Delete all videos?')) {
+      await sendDelete('/api/videos/');
+      loadGallery("{% url 'api_video_list' %}", 'videos', true, '/api/videos');
+    }
+  };
 
   document.getElementById('reload-timelapse').onclick = () =>
-    loadGallery("{% url 'api_timelapse_list' %}", 'timelapse');
+    loadGallery("{% url 'api_timelapse_list' %}", 'timelapse', false, '/api/timelapse');
+
+  document.getElementById('delete-all-timelapse').onclick = async () => {
+    if (confirm('Delete all timelapse frames?')) {
+      await sendDelete('/api/timelapse/');
+      loadGallery("{% url 'api_timelapse_list' %}", 'timelapse', false, '/api/timelapse');
+    }
+  };
 
   window.onload = () => {
-    loadGallery("{% url 'api_media_list' %}", 'photos');
-    loadGallery("{% url 'api_video_list' %}", 'videos', true);
-    loadGallery("{% url 'api_timelapse_list' %}", 'timelapse');
+    loadGallery("{% url 'api_media_list' %}", 'photos', false, '/api/photos');
+    loadGallery("{% url 'api_video_list' %}", 'videos', true, '/api/videos');
+    loadGallery("{% url 'api_timelapse_list' %}", 'timelapse', false, '/api/timelapse');
   };
 </script>
 {% endblock %}

@@ -484,3 +484,109 @@ def timelapse_list_api(request):
     return JsonResponse(data, safe=False)
 
 
+
+
+@login_required
+@csrf_exempt
+def delete_photo(request, filename):
+    """Delete a single snapshot file."""
+    if request.method != 'DELETE':
+        return HttpResponseBadRequest('DELETE only')
+    photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
+    path = os.path.join(photos_dir, filename)
+    if not os.path.isfile(path):
+        return JsonResponse({'error': 'Not found'}, status=404)
+    try:
+        os.remove(path)
+        return JsonResponse({'status': 'deleted', 'filename': filename})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@csrf_exempt
+def delete_all_photos(request):
+    """Delete all snapshot files."""
+    if request.method != 'DELETE':
+        return HttpResponseBadRequest('DELETE only')
+    photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
+    count = 0
+    for fn in os.listdir(photos_dir):
+        if fn.lower().endswith(('.jpg','.jpeg','.png')):
+            try:
+                os.remove(os.path.join(photos_dir, fn))
+                count += 1
+            except:
+                pass
+    return JsonResponse({'status':'deleted_all','count': count})
+
+
+@login_required
+@csrf_exempt
+def delete_video(request, filename):
+    """Delete a single recording."""
+    if request.method != 'DELETE':
+        return HttpResponseBadRequest('DELETE only')
+    vids_dir = os.path.join(settings.MEDIA_ROOT, 'videos')
+    path = os.path.join(vids_dir, filename)
+    if not os.path.isfile(path):
+        return JsonResponse({'error': 'Not found'}, status=404)
+    try:
+        os.remove(path)
+        return JsonResponse({'status': 'deleted', 'filename': filename})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@csrf_exempt
+def delete_all_videos(request):
+    """Delete all recordings."""
+    if request.method != 'DELETE':
+        return HttpResponseBadRequest('DELETE only')
+    vids_dir = os.path.join(settings.MEDIA_ROOT, 'videos')
+    count = 0
+    for fn in os.listdir(vids_dir):
+        if fn.lower().endswith('.mp4'):
+            try:
+                os.remove(os.path.join(vids_dir, fn))
+                count += 1
+            except:
+                pass
+    return JsonResponse({'status':'deleted_all','count': count})
+
+
+@login_required
+@csrf_exempt
+def delete_timelapse(request, filename):
+    """Delete a single timelapse frame."""
+    if request.method != 'DELETE':
+        return HttpResponseBadRequest('DELETE only')
+    config, _ = AppConfigSettings.objects.get_or_create(pk=1)
+    folder = config.timelapse_folder or 'timelapse'
+    tl_dir = os.path.join(settings.MEDIA_ROOT, folder)
+    path = os.path.join(tl_dir, filename)
+    if not os.path.isfile(path):
+        return JsonResponse({'error': 'Not found'}, status=404)
+    try:
+        os.remove(path)
+        return JsonResponse({'status': 'deleted', 'filename': filename})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@csrf_exempt
+def delete_all_timelapse(request):
+    """Delete all timelapse frames."""
+    if request.method != 'DELETE':
+        return HttpResponseBadRequest('DELETE only')
+    config, _ = AppConfigSettings.objects.get_or_create(pk=1)
+    folder = config.timelapse_folder or 'timelapse'
+    tl_dir = os.path.join(settings.MEDIA_ROOT, folder)
+    count = 0
+    for fn in os.listdir(tl_dir):
+        if fn.lower().endswith(('.jpg','.jpeg','.png')):
+            try:
+                os.remove(os.path.join(tl_dir, fn))
+                count += 1
+            except:
+                pass
+    return JsonResponse({'status':'deleted_all','count': count})

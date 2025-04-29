@@ -26,9 +26,21 @@ urlpatterns = [
     # Protected camera events webhook
     path('camera-event/', views.camera_event,    name='camera_event'),
     path('api/snapshot/', views.capture_photo, name='api_snapshot'),
-    path('api/timelapse/', views.timelapse_list_api, name='api_timelapse_list'),
-    path('api/videos/',       views.video_list_api,   name='api_video_list'),
-    path('api/media/',    views.media_list_api, name='api_media_list'),
+
+    # Photos
+    path('api/photos/',                views.media_list_api,         name='api_media_list'),
+    path('api/photos/<str:filename>/', views.delete_photo,           name='api_delete_photo'),
+    path('api/photos/',                views.delete_all_photos,      name='api_delete_all_photos'),
+
+    # Videos
+    path('api/videos/',                views.video_list_api,         name='api_video_list'),
+    path('api/videos/<str:filename>/', views.delete_video,           name='api_delete_video'),
+    path('api/videos/',                views.delete_all_videos,      name='api_delete_all_videos'),
+
+    # Timelapse
+    path('api/timelapse/',             views.timelapse_list_api,     name='api_timelapse_list'),
+    path('api/timelapse/<str:filename>/', views.delete_timelapse,     name='api_delete_timelapse'),
+    path('api/timelapse/',             views.delete_all_timelapse,   name='api_delete_all_timelapse'),
 
     path('timelapse-gallery/', views.timelapse_gallery, name='timelapse_gallery'),
     path('media-browser/', views.media_browser, name='media_browser'),

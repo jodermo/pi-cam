@@ -428,19 +428,24 @@ def media_browser(request):
 
 @login_required
 def media_list_api(request):
-    """Return JSON list of snapshots under MEDIA_ROOT/photos/"""
     photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
     if not os.path.isdir(photos_dir):
         return JsonResponse([], safe=False)
+
     files = sorted(
-        [f for f in os.listdir(tl_dir) if f.lower().endswith(('.jpg','.jpeg','.png'))],
+        [f for f in os.listdir(photos_dir) if f.lower().endswith(('.jpg','.jpeg','.png'))],
         reverse=True
     )
-    data = [{
-        'filename': f,
-        'url': settings.MEDIA_URL.rstrip('/') + '/photos/' + f
-    } for f in files]
+
+    data = [
+        {
+            'filename': f,
+            'url': settings.MEDIA_URL.rstrip('/') + '/photos/' + f
+        }
+        for f in files
+    ]
     return JsonResponse(data, safe=False)
+
 
 
 @login_required

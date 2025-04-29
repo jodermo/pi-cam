@@ -14,21 +14,46 @@ server {
   ssl_certificate     ${SSL_CERTIFICATE};
   ssl_certificate_key ${SSL_CERTIFICATE_KEY};
 
+  # ————————————————————————————————
+  # 0) Serve index.html navigation at “/”
+  location = / {
+    root   /app/static;
+    try_files /index.html =404;
+  }
+
+  # ————————————————————————————————
+  # 0.1) Friendly live-stream URL
+  location /stream/ {
+    # internally rewrite to the camera’s MJPEG endpoint
+    rewrite ^/stream/(.*)$ /api/stream break;
+
+    proxy_pass            http://pi-cam-camera:8000;
+    proxy_http_version    1.1;
+    proxy_set_header      Host            $host;
+    proxy_set_header      X-Real-IP       $remote_addr;
+    proxy_set_header      Connection      "";
+    chunked_transfer_encoding off;
+    proxy_buffering      off;
+  }
+
+  # ————————————————————————————————
   # 1) Camera API
   location /api/ {
       rewrite ^/api/(.*)$ /$1 break;
       proxy_pass         http://pi-cam-camera:8000;
-      proxy_set_header   Host $host;
-      proxy_set_header   X-Real-IP $remote_addr;
+      proxy_set_header   Host         $host;
+      proxy_set_header   X-Real-IP    $remote_addr;
   }
 
-  # 2) Django
+  # ————————————————————————————————
+  # 2) Django / Controller app
   location / {
       proxy_pass         http://pi-cam-controller:8001;
-      proxy_set_header   Host $host;
-      proxy_set_header   X-Real-IP $remote_addr;
+      proxy_set_header   Host         $host;
+      proxy_set_header   X-Real-IP    $remote_addr;
   }
 
+  # ————————————————————————————————
   # 3) Static & media
   location /static/ { alias /app/static/; }
   location /media/  { alias /app/media/;  }

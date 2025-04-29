@@ -4,22 +4,32 @@ server {
     listen 80;
     server_name ${DOMAIN};
 
+
+    # MJPEG stream - proxy directly to camera container
+    location = /api/stream {
+        proxy_pass         http://pi-cam-camera:8000/api/stream;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   Connection "";
+        chunked_transfer_encoding off;
+        proxy_buffering    off;
+    }
+
+    # Bare /api → controller
+    location = /api {
+        proxy_pass         http://pi-cam-controller:8001/api;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+    }
+
+    # All other API calls → controller
     location /api/ {
         proxy_pass         http://pi-cam-controller:8001/api/;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
     }
     
-    location /api/stream {
-        proxy_pass         http://pi-cam-controller:8001/api/stream;
-        proxy_http_version 1.1;
-        proxy_set_header   Host $host;
-        proxy_set_header   X-Real-IP $remote_addr;
-        proxy_set_header   Connection "";
-        chunked_transfer_encoding off;
-        proxy_buffering off;
-    }
-
     location / {
         proxy_pass         http://pi-cam-controller:8001;
         proxy_set_header   Host $host;

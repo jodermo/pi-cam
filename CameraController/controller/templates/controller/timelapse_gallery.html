@@ -33,8 +33,10 @@
     <canvas id="timelapse-canvas"></canvas>
     <div class="player-controls">
       <button id="play-pause">Play</button>
-      <label for="speed">Speed (ms/frame):</label>
-      <input id="speed" type="number" min="50" value="500" />
+      <label for="speed-number">Speed (ms/frame):</label>
+      <input id="speed-number" type="number" min="25" value="500" />
+      <label for="speed-slider">Adjust Speed:</label>
+      <input id="speed-slider" type="range" min="25" max="2000" step="50" value="500" />
     </div>
   </div>
 

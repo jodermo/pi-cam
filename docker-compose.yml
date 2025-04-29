@@ -26,7 +26,7 @@ services:
       pi-cam-camera:
         condition: service_healthy
       pi-cam-database:
-        condition: service_started
+        condition: service_healthy
     env_file:
       - ./.env
     environment:
@@ -69,6 +69,10 @@ services:
     restart: always
     env_file:
       - ./.env
+    environment:
+      - POSTGRES_DB=camdb
+      - POSTGRES_USER=camuser
+      - POSTGRES_PASSWORD=securepass
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:

@@ -29,10 +29,11 @@ from .stream_recorder import StreamRecorder
 
 logger = logging.getLogger(__name__)
 
-API_PREFIX = os.getenv('CAMERA_API_URL', '/api')
-CAMERA_SERVICE_BASE = os.getenv('CAMERA_SERVICE_URL', 'http://pi-cam-camera:8000')
-STREAM_URL = f"{CAMERA_SERVICE_BASE.rstrip('/')}/api/stream"
+API_PREFIX          = os.getenv('CAMERA_API_URL', '/api')
+STREAM_PATH         = f"{API_PREFIX}/stream"
 
+CAMERA_SERVICE_BASE = os.getenv('CAMERA_SERVICE_URL', 'http://pi-cam-camera:8000')
+INTERNAL_STREAM_URL = f"{CAMERA_SERVICE_BASE.rstrip('/')}/api/stream"
 
 # Properties to expose in UI
 SETTINGS_FIELDS = [

@@ -18,17 +18,16 @@ server {
     ssl_protocols       TLSv1.2 TLSv1.3;
     ssl_ciphers         HIGH:!aNULL:!MD5;
 
-
-    # Main controller app proxy
-    location / {
-        proxy_pass         http://pi-cam-controller:8001;
+    # Camera API proxy
+    location /api/ {
+        proxy_pass         http://pi-cam-controller:8001/api/;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
     }
 
     # MJPEG stream proxy (disable buffering)
     location /api/stream {
-        proxy_pass                    http://pi-cam-camera:8000/api/stream;
+        proxy_pass                    http://pi-cam-controller:8001/api/stream;
         proxy_http_version            1.1;
         proxy_set_header              Host $host;
         proxy_set_header              X-Real-IP $remote_addr;
@@ -36,6 +35,14 @@ server {
         chunked_transfer_encoding     off;
         proxy_buffering               off;
     }
+    
+    # Main controller app proxy
+    location / {
+        proxy_pass         http://pi-cam-controller:8001;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+    }
+
 
     # Static and media
     location /static/ {
@@ -43,9 +50,10 @@ server {
         access_log off;
         expires 1h;
     }
+
     location /media/ {
-        alias /app/media/;
-        access_log off;
-        expires 1h;
+        proxy_pass         http://pi-cam-controller:8001/media/;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
     }
 }

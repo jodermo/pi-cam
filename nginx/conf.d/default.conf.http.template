@@ -1,5 +1,13 @@
 # nginx/conf.d/default.conf.http.template
 
+# ─────────────── MIME setup ────────────────────
+# map file extensions to Content-Type headers
+include       /etc/nginx/mime.types;
+# if an extension is missing, default to binary
+default_type  application/octet-stream;
+# ────────────────────────────────────────────────
+
+
 server {
     listen 80;
     server_name ${DOMAIN};
@@ -36,21 +44,22 @@ server {
         proxy_set_header   X-Real-IP $remote_addr;
     }
 
+    location /static/ { alias /app/static/; }
+
     # serve media (photos, videos, timelapse) directly with proper MIME + range support
     location /media/ {
-        alias /app/media/;              # point this at your MEDIA_ROOT
-        autoindex off;
-        # ensure .mp4 → video/mp4, .jpg → image/jpeg, etc.
-        include       /etc/nginx/mime.types;
-        default_type  application/octet-stream;
+        alias           /app/media/;            # match your Django MEDIA_ROOT
+        include         /etc/nginx/mime.types;  # map .mp4 → video/mp4, .jpg → image/jpeg, etc.
+        default_type    application/octet-stream;
 
-        # allow byte-range requests so <video> can stream and seek
-        add_header   Accept-Ranges  bytes;
+        # allow byte-range requests so HTML5 <video> can stream/seek
+        add_header      Accept-Ranges  bytes;
+
         # optional caching
-        expires      1h;
+        expires         1h;
+        access_log      off;
     }
 
 
-    location /static/ { alias /app/static/; }
 
 }

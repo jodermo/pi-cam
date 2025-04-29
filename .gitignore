@@ -16,11 +16,6 @@ db.sqlite3
 .env.*
 
 # Django media files (uploaded photos, videos, timelapse images)
-media/
-MEDIA/
-!media/photos/README.md
-!media/timelapse/README.md
-!media/videos/README.md
 
 # Django staticfiles
 staticfiles/

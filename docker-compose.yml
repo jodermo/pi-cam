@@ -5,7 +5,7 @@ services:
     build: ./USBCameraApp
     restart: always
     # devices:
-      #  - "/dev/video0:/dev/video0"
+      # - "/dev/video0:/dev/video0"
     env_file:
       - ./.env
     environment:
@@ -39,7 +39,7 @@ services:
       - ./.env
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - ./CameraController/static:/app/static:ro
+      - ./static:/app/static:ro
       - media_data:/app/media:ro
     depends_on:
       - pi-cam-controller

@@ -27,6 +27,8 @@ urlpatterns = [
     path('camera-event/', views.camera_event,    name='camera_event'),
 
     
-    path('app-settings/', views.app_settings, name='app_settings'),
     path('timelapse-gallery/', views.timelapse_gallery, name='timelapse_gallery'),
+    path('media-browser/', views.media_browser, name='media_browser'),
+    path('app-settings/', views.app_settings, name='app_settings'),
+
 ]

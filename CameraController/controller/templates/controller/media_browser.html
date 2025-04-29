@@ -1,0 +1,60 @@
+{% extends "controller/base.html" %}
+{% load static %}
+
+{% block title %}Media Browser{% endblock %}
+
+
+{% block content %}
+<nav>
+  <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">← Home</a>
+  <a href="/stream/" class="{% if request.resolver_match.url_name == 'media_browser' %}active{% endif %}">Live Stream</a>
+</nav>
+
+<h1>Media Browser</h1>
+
+<h2>Snapshot</h2>
+<form id="snap-form" method="post">
+  {% csrf_token %}
+  <button type="submit">Take Snapshot</button>
+</form>
+
+<h2>Captured Images</h2>
+<div id="gallery" class="gallery"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function loadMedia() {
+    const res = await fetch('/api/media');
+    const items = await res.json();
+    const gallery = document.getElementById('gallery');
+    gallery.innerHTML = '';
+    if (items.length === 0) {
+      gallery.textContent = 'No images found.';
+      return;
+    }
+    items.forEach(item => {
+      const wrapper = document.createElement('div');
+      const img = document.createElement('img');
+      img.src = '/media/' + item.filename;
+      img.alt = item.filename;
+      const link = document.createElement('a');
+      link.href = '/media/' + item.filename;
+      link.download = item.filename;
+      link.textContent = 'Download';
+      link.className = 'download';
+      wrapper.appendChild(img);
+      wrapper.appendChild(link);
+      gallery.appendChild(wrapper);
+    });
+  }
+
+  document.getElementById('snap-form').onsubmit = async (e) => {
+    e.preventDefault();
+    await fetch('/api/snapshot', {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}});
+    loadMedia();
+  };
+
+  window.onload = loadMedia;
+</script>
+{% endblock %}

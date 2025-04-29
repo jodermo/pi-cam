@@ -375,3 +375,16 @@ def app_settings(request):
     return render(request, 'controller/app_settings.html', {
         'form': form,
     })
+
+
+@login_required
+def media_browser(request):
+    # Fetch list of saved images from camera service
+    try:
+        resp = requests.get(f"{CAMERA_SERVICE_BASE.rstrip('/')}/media", timeout=5)
+        items = resp.json() if resp.ok else []
+    except:
+        items = []
+    # Build full URLs for template
+    images = [settings.MEDIA_URL.rstrip('/') + '/' + it['filename'] for it in items]
+    return render(request, 'controller/media_browser.html', {'images': images})

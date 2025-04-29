@@ -4,33 +4,20 @@ server {
     listen 80;
     server_name ${DOMAIN};
 
-    # ————————————————————————————————
-    # 0) Serve our index.html navigation
-    #    (falls back to / if someone hits “/” exactly)
-    location = / {
-        root   /app/static;
-        try_files /index.html =404;
-    }
-
-    # ————————————————————————————————
-    # 0.1) Expose live MJPEG at /stream/ for users
-    location /stream/ {
-        # rewrite to the internal /api/stream path
-        rewrite ^/stream/(.*)$ /api/stream break;
-
+    location /api/ {
         proxy_pass         http://pi-cam-camera:8000;
-        proxy_http_version 1.1;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
-        proxy_set_header   Connection "";
-        chunked_transfer_encoding off;
-        # disable buffering so frames arrive immediately
-        proxy_buffering   off;
     }
 
-    # ————————————————————————————————
-    # 1) MJPEG STREAM internal API (unchanged)
-    location = /api/stream {
+
+    location / {
+        proxy_pass         http://pi-cam-controller:8001;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+    }
+
+    location /api/stream {
         proxy_pass         http://pi-cam-camera:8000/api/stream;
         proxy_http_version 1.1;
         proxy_set_header   Host $host;
@@ -39,28 +26,7 @@ server {
         chunked_transfer_encoding off;
     }
 
-    # ————————————————————————————————
-    # 2) Camera API proxy (snapshot, media list, etc.)
-    location /api/ {
-        proxy_pass         http://pi-cam-camera:8000;
-        proxy_set_header   Host $host;
-        proxy_set_header   X-Real-IP $remote_addr;
-    }
 
-    # ————————————————————————————————
-    # 3) Django/Controller app proxy for everything else
-    location / {
-        proxy_pass         http://pi-cam-controller:8001;
-        proxy_set_header   Host $host;
-        proxy_set_header   X-Real-IP $remote_addr;
-    }
-
-    # ————————————————————————————————
-    # 4) Static & media served directly
-    location /static/ {
-        alias /app/static/;
-    }
-    location /media/ {
-        alias /app/media/;
-    }
+    location /static/ { alias /app/static/; }
+    location /media/  { alias /app/media/;  }
 }

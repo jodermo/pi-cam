@@ -1,315 +1,94 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>USB Camera Controller</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      max-width: 800px;
-      margin: 2em auto;
-      padding: 0 1em;
-    }
-    h1, h2 {
-      color: #333;
-    }
-    img {
-      width: 100%;
-      max-height: 400px;
-      border: 1px solid #ccc;
-    }
-    .controls {
-      margin-top: 1.5em;
-    }
-    .controls form {
-      display: inline-block;
-      margin-right: 1em;
-      margin-bottom: 1em;
-    }
-    label {
-      margin-right: 0.5em;
-    }
-    input[type="number"] {
-      width: 4em;
-    }
-    button {
-      padding: 0.3em 0.6em;
-      border: none;
-      background: #007bff;
-      color: white;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    .actions {
-      margin-top: 2em;
-    }
-    .actions button,
-    .actions form button {
-      background: #28a745;
-    }
-    .actions button:hover,
-    .actions form button:hover {
-      background: #1e7e34;
-    }
+{% extends "controller/base.html" %}
+{% load static %}
 
-    .camera-error {
-      color: white;
-      background: #d9534f;
-      padding: 0.5em 1em;
-      border-radius: 4px;
-      margin-bottom: 1em;
-    }
-    nav { background: #333; color: #fff; padding: 0.5em; }
-    nav a { color: #fff; margin-right: 1em; text-decoration: none; }
-  </style>
-</head>
-<body>
-  <h1>USB Camera Controller</h1>
-  <nav>
-    <a href="/stream/">Live Stream</a>
-    <a href="/api/media">Media List (JSON)</a>
-    <button id="snap">Take Snapshot</button>
-  </nav>
-    <!-- Camera selector -->
-  <div class="controls">
-    <h2>Choose Camera</h2>
+{% block title %}Dashboard - USB Camera Controller{% endblock %}
+{% block head %}
+<style>
+  .controls { margin-top: 1.5em; }
+  .controls form { display: inline-block; margin-right: 1em; margin-bottom: 1em; }
+  label { margin-right: 0.5em; }
+  input[type="number"] { width: 4em; }
+  img.stream { width: 100%; max-height: 400px; border: 1px solid #ccc; }
+  .actions { margin-top: 2em; }
+  .actions button, .actions form button { background: #28a745; }
+  .camera-error { color: white; background: #d9534f; padding: 0.5em 1em; border-radius: 4px; margin-bottom: 1em; }
+</style>
+{% endblock %}
 
-    {% if camera_list %}
-      <form method="post" id="camera-form" action="{% url 'switch_camera' idx=0 %}">
-        {% csrf_token %}
-        <label for="camera-select">Source:</label>
-        <select id="camera-select" name="idx" onchange="updateCameraForm(this.value);">
-          {% for src in camera_list %}
-            <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>
-              {{ src }}
-            </option>
-          {% endfor %}
-        </select>
-      </form>
-    {% else %}
-      <p>No cameras available.</p>
-    {% endif %}
-  </div>
+{% block header %}USB Camera Controller{% endblock %}
 
-  <script>
-  function updateCameraForm(idx) {
-      const form = document.getElementById('camera-form');
-      form.action = form.action.replace(/switch\/\d+/, 'switch/' + idx);
-      form.submit();
-  }
-  </script>
-
-
-  <!-- Live MJPEG stream -->
-  <img src="{{ stream_url }}" alt="Live camera stream" />
-
-  <!-- Camera settings forms -->
-  <div class="controls">
-    <h2>Adjust Settings</h2>
-    {% for setting in settings_fields %}
-    <div class="setting-row" style="margin-bottom: 1em;">
-      <label for="id_{{ setting.name }}">{{ setting.name|capfirst }}:</label>
-    
-      <input id="id_{{ setting.name }}" type="number" min="0" max="255"
-             value="{{ setting.value }}"
-             onchange="syncSlider('{{ setting.name }}', this.value)" />
-    
-      <input id="slider_{{ setting.name }}" type="range" min="0" max="255"
-             value="{{ setting.value }}"
-             onchange="syncInput('{{ setting.name }}', this.value)" />
-    
-      <button onclick="submitSetting('{{ setting.name }}')">Set</button>
-    </div>
-    
-    <script>
-      function syncSlider(settingName, value) {
-          const slider = document.getElementById('slider_' + settingName);
-          if (slider) {
-              slider.value = value;
-          }
-      }
-      
-      function syncInput(settingName, value) {
-          const input = document.getElementById('id_' + settingName);
-          if (input) {
-              input.value = value;
-          }
-      }
-      </script>
-      
-  {% endfor %}
-
-
-    <!-- Auto Exposure Toggle -->
-    <form method="post" action="{% url 'set_setting' 'auto_exposure' %}">
+{% block content %}
+<div class="controls">
+  <h2>Choose Camera</h2>
+  {% if camera_list %}
+    <form method="post" id="camera-form" action="{% url 'switch_camera' idx=0 %}">
       {% csrf_token %}
-      <label for="id_auto_exposure">Auto Exposure:</label>
-      <input id="id_auto_exposure" type="checkbox" name="value" value="1" {% if db_settings.auto_exposure %}checked{% endif %} onchange="this.form.submit()" />
+      <label for="camera-select">Source:</label>
+      <select id="camera-select" name="idx" onchange="updateCameraForm(this.value);">
+        {% for src in camera_list %}
+          <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>{{ src }}</option>
+        {% endfor %}
+      </select>
     </form>
-  </div>
+  {% else %}
+    <p>No cameras available.</p>
+  {% endif %}
+</div>
 
-  <!-- Actions: restart, capture, record & health check -->
-  <div class="actions">
-    <h2>Actions</h2>
-  
-    <button onclick="postAction('{% url 'restart' %}')">Restart Camera</button>
-    <button onclick="postAction('{% url 'capture_photo' %}', true)">Capture Photo</button>
-    <button onclick="postAction('{% url 'start_recording' %}')">Start Recording</button>
-    <button onclick="postAction('{% url 'stop_recording' %}')">Stop Recording</button>
-  
-    <!-- Aufnahmeindikator -->
-    <div id="recording-status" style="margin: 1em 0; color: red; font-weight: bold;"></div>
-  
-    <!-- Letztes Video -->
-    <div id="last-video-block"></div>
-  
-    <h3 style="margin-top: 2em;">System Health</h3>
-    <pre id="health-output" style="margin-top:1em; background:#f8f9fa; padding:0.5em; border:1px solid #ddd;"></pre>
-    
-  </div>
-  
-  <div id="camera-error"  class="camera-error" style="display:none; color:white; background:#d9534f; padding:0.5em 1em; border-radius:4px; margin-top:1em;"></div>
-  <div id="health-check-error" class="camera-error"  style="display:none; color:white; background:#d9534f; padding:0.5em 1em; border-radius:4px; margin-top:1em;"></div>
-  <div id="camera-recovered" class="camera-error" style="
-    display:none;
-    background: #5cb85c;
-    color: white;
-    padding: 0.5em 1em;
-    border-radius: 4px;
-    margin-top: 1em;">
-    Camera recovered
-  </div>
+<img class="stream" src="{{ stream_url }}" alt="Live camera stream" />
 
-  <script>
-let wasUsingFallback = false;
-function submitSetting(settingName) {
-  const val = document.getElementById('id_' + settingName).value;
-  fetch(`/set/${settingName}/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'X-CSRFToken': '{{ csrf_token }}'
-    },
-    body: `value=${val}`
-  })
-  .then(res => {
-    if (!res.ok) throw new Error(res.statusText);
-    console.log(`Setting '${settingName}' updated to ${val}`);
-  })
-  .catch(err => alert("Failed to set setting: " + err));
+<div class="controls">
+  <h2>Adjust Settings</h2>
+  {% for setting in settings_fields %}
+    <div class="setting-row">
+      <label for="id_{{ setting.name }}">{{ setting.name|capfirst }}:</label>
+      <input id="id_{{ setting.name }}" type="number" min="0" max="255" value="{{ setting.value }}" onchange="syncSlider('{{ setting.name }}', this.value)" />
+      <input id="slider_{{ setting.name }}" type="range" min="0" max="255" value="{{ setting.value }}" onchange="syncInput('{{ setting.name }}', this.value)" />
+      <button type="button" onclick="submitSetting('{{ setting.name }}')">Set</button>
+    </div>
+  {% endfor %}
+  <form method="post" action="{% url 'set_setting' 'auto_exposure' %}">
+    {% csrf_token %}
+    <label for="id_auto_exposure">Auto Exposure:</label>
+    <input id="id_auto_exposure" type="checkbox" name="value" value="1" {% if db_settings.auto_exposure %}checked{% endif %} onchange="this.form.submit()" />
+  </form>
+</div>
+
+<div class="actions">
+  <h2>Actions</h2>
+  <button onclick="postAction('{% url 'restart' %}')">Restart Camera</button>
+  <button onclick="postAction('{% url 'capture_photo' %}', true)">Capture Photo</button>
+  <button onclick="postAction('{% url 'start_recording' %}')">Start Recording</button>
+  <button onclick="postAction('{% url 'stop_recording' %}')">Stop Recording</button>
+  <div id="recording-status"></div>
+  <div id="last-video-block"></div>
+</div>
+
+<div id="camera-error" class="camera-error" style="display:none;"></div>
+<div id="health-check-error" class="camera-error" style="display:none;"></div>
+<div id="camera-recovered" class="camera-error" style="display:none; background:#5cb85c;">
+  Camera recovered
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateCameraForm(idx) {
+  const form = document.getElementById('camera-form');
+  form.action = form.action.replace(/switch\/\d+/, 'switch/' + idx);
+  form.submit();
 }
-function showError(id, msg) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = msg;
-  el.style.display = 'block';
+function syncSlider(name, val) { document.getElementById('slider_'+name).value = val; }
+function syncInput(name, val) { document.getElementById('id_'+name).value = val; }
+function submitSetting(name) {
+  const val = document.getElementById('id_'+name).value;
+  fetch(`/set/${name}/`, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':'{{ csrf_token }}'}, body:`value=${val}` });
 }
-
-function hideError(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = '';
-  el.style.display = 'none';
+function postAction(url, isPhoto=false) {
+  fetch(url,{method:'POST',headers:{'X-CSRFToken':'{{ csrf_token }}'}})
+    .then(res=>res.ok?isPhoto?res.blob():res.json():res.json().then(e=>{throw e;}))
+    .then(data=>{/*handle UI*/})
+    .catch(e=>{/*error*/});
 }
-
-function postAction(url, isPhoto = false) {
-  fetch(url, {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': '{{ csrf_token }}'
-    }
-  })
-  .then(res => {
-    if (!res.ok) {
-      return res.json().then(err => {
-        const msg = err.error || 'Unknown error';
-        showError('camera-error', msg);
-        throw new Error(msg);
-      });
-    }else{
-      hideError('camera-error');
-    }
-    return isPhoto ? res.blob() : res.json();
-  })
-  .then(data => {
-    document.getElementById('camera-error').textContent = ''; // clear error
-
-    if (isPhoto && data instanceof Blob) {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(data);
-      a.download = 'photo.jpg';
-      a.click();
-    } else {
-      if (data.status === 'started') {
-        document.getElementById('recording-status').textContent = '● Recording is active...';
-      }
-      if (data.status === 'stopped' && data.url) {
-        document.getElementById('recording-status').textContent = '';
-        document.getElementById('last-video-block').innerHTML = `
-          <div style="margin: 1em 0;">
-            <strong>Last Recording:</strong><br/>
-            <video src="${data.url}" controls style="width:100%; max-width:600px; margin-top: 0.5em;"></video>
-            <br/>
-            <a href="${data.url}" download>Download MP4</a>
-          </div>`;
-      }
-    }
-  })
-  .catch(err => {
-    console.warn("Action failed:", err);
-  });
-}
-
-function updateHealth() {
-  fetch("{% url 'health' %}")
-    .then(res => res.json())
-    .then(data => {
-      const out = document.getElementById('health-output');
-      out.textContent = JSON.stringify(data, null, 2);
-
-      if (data.using_fallback) {
-        const msg = `Fallback active\n` +
-                    `• Source: ${data.current_src}\n` +
-                    `• Camera open: ${data.camera_open ? "yes" : "no"}\n` +
-                    `• Uptime: ${data.uptime_secs}s`;
-        showError('health-check-error', msg);
-        hideError('camera-recovered');
-      } else {
-        hideError('health-check-error');
-
-        if (wasUsingFallback) {
-          const recoveredEl = document.getElementById('camera-recovered');
-          recoveredEl.style.display = 'block';
-          setTimeout(() => recoveredEl.style.display = 'none', 3000);
-        }
-      }
-
-      wasUsingFallback = data.using_fallback;
-    })
-    .catch(err => {
-      const out = document.getElementById('health-output');
-      const errorBox = document.getElementById('health-check-error');
-
-      const message = `Health check failed.\n` +
-                      `• ${err.name || 'Error'}: ${err.message || err.toString()}`;
-
-      out.textContent = message;
-      showError('health-check-error', message);
-      console.warn("Health check error:", err);
-    });
-
-}
-
-// Automatisch alle 5 Sekunden abrufen
-setInterval(updateHealth, 5000);
-
-// Initial beim Laden starten
-document.addEventListener('DOMContentLoaded', updateHealth);
-
-   </script>
-    
-</body>
-</html>
+</script>
+{% endblock %}

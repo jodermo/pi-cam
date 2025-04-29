@@ -1,0 +1,31 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}USB Camera Controller{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'controller/styles.css' %}" />
+  <style>
+    /* Active nav link styling */
+    nav a.active {
+      font-weight: bold;
+      text-decoration: underline;
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <h1>{% block header %}USB Camera Controller{% endblock %}</h1>
+  <nav>
+    <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">Camera</a>
+    <a href="{% url 'timelapse_gallery' %}" class="{% if request.resolver_match.url_name == 'timelapse_gallery' %}active{% endif %}">Timelapse</a>
+    <a href="{% url 'media_browser' %}" class="{% if request.resolver_match.url_name == 'media_browser' %}active{% endif %}">Media</a>
+    <a href="{% url 'app_settings' %}" class="{% if request.resolver_match.url_name == 'app_settings' %}active{% endif %}">Settings</a>
+  </nav>
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

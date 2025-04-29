@@ -3,11 +3,10 @@
 
 {% block title %}Media Browser{% endblock %}
 
-
 {% block content %}
 <nav>
   <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">← Home</a>
-  <a href="/stream/" class="{% if request.resolver_match.url_name == 'media_browser' %}active{% endif %}">Live Stream</a>
+  <a href="{% url 'media_browser' %}" class="{% if request.resolver_match.url_name == 'media_browser' %}active{% endif %}">Live Stream</a>
 </nav>
 
 <h1>Media Browser</h1>
@@ -25,21 +24,23 @@
 {% block scripts %}
 <script>
   async function loadMedia() {
-    const res = await fetch('/api/media');
+    // fetch list of media items from the Django API
+    const res = await fetch("{% url 'api_media_list' %}");
     const items = await res.json();
     const gallery = document.getElementById('gallery');
     gallery.innerHTML = '';
-    if (items.length === 0) {
+    if (!items.length) {
       gallery.textContent = 'No images found.';
       return;
     }
     items.forEach(item => {
       const wrapper = document.createElement('div');
       const img = document.createElement('img');
-      img.src = '/media/' + item.filename;
+      // use Django-served media URL
+      img.src = item.url;
       img.alt = item.filename;
       const link = document.createElement('a');
-      link.href = '/media/' + item.filename;
+      link.href = item.url;
       link.download = item.filename;
       link.textContent = 'Download';
       link.className = 'download';
@@ -51,7 +52,10 @@
 
   document.getElementById('snap-form').onsubmit = async (e) => {
     e.preventDefault();
-    await fetch('/api/snapshot', {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}});
+    await fetch("{% url 'api_snapshot' %}", {
+      method: 'POST',
+      headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    });
     loadMedia();
   };
 

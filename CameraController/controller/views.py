@@ -189,24 +189,43 @@ def set_setting(request, setting):
     return JsonResponse({'status': 'ok', 'setting': setting, 'value': val})
 
 
+
 @login_required
 def capture_photo(request):
-    cap = cv2.VideoCapture(STREAM_URL)
-    if not cap.isOpened():
-        return JsonResponse({'error': 'Camera unavailable'}, status=503)
-    ret, frame = cap.read(); cap.release()
-    if not ret:
+    """
+    Capture one frame from the camera stream, save it under MEDIA_ROOT/photos/,
+    and return it as a JPEG download.
+    """
+    # 1) open the MJPEG/video stream
+    cap = cv2.VideoCapture(settings.CAMERA_API_URL + '/stream')
+    ret, frame = cap.read()
+    cap.release()
+
+    if not ret or frame is None:
         return JsonResponse({'error': 'Could not read frame from stream'}, status=500)
 
+    # 2) ensure the photos folder exists
+    photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
+    os.makedirs(photos_dir, exist_ok=True)
+
+    # 3) build a timestamped filename
+    fname = datetime.utcnow().strftime('photo_%Y%m%d_%H%M%S.jpg')
+    fpath = os.path.join(photos_dir, fname)
+
+    # 4) write the JPEG to disk
+    success = cv2.imwrite(fpath, frame)
+    if not success:
+        return JsonResponse({'error': 'Failed to write photo to disk'}, status=500)
+
+    # 5) read back & encode for immediate response
     ret, buf = cv2.imencode('.jpg', frame)
     if not ret:
-        return JsonResponse({'error': 'Encode failed'}, status=500)
+        return JsonResponse({'error': 'Failed to encode JPEG'}, status=500)
 
-    fname = datetime.utcnow().strftime('photo_%Y%m%d_%H%M%S.jpg')
-    return HttpResponse(buf.tobytes(), content_type='image/jpeg', headers={
-        'Content-Disposition': f'attachment; filename="{fname}"'
-    })
-
+    # 6) return the JPEG as an attachment download
+    response = HttpResponse(buf.tobytes(), content_type='image/jpeg')
+    response['Content-Disposition'] = f'attachment; filename="{fname}"'
+    return response
 
 @login_required
 def start_recording(request):
@@ -379,12 +398,11 @@ def app_settings(request):
 
 @login_required
 def media_browser(request):
-    # Fetch list of saved images from camera service
-    try:
-        resp = requests.get(f"{CAMERA_SERVICE_BASE.rstrip('/')}/media", timeout=5)
-        items = resp.json() if resp.ok else []
-    except:
-        items = []
-    # Build full URLs for template
-    images = [settings.MEDIA_URL.rstrip('/') + '/' + it['filename'] for it in items]
+    photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
+    files = sorted(os.listdir(photos_dir), reverse=True)
+    images = [
+        settings.MEDIA_URL.rstrip('/') + '/photos/' + fn
+        for fn in files
+        if fn.lower().endswith(('.jpg','jpeg','png'))
+    ]
     return render(request, 'controller/media_browser.html', {'images': images})

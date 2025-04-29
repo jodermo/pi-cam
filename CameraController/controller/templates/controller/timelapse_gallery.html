@@ -6,7 +6,7 @@
 {% block content %}
 <h1>Timelapse Gallery</h1>
 
-<form method="post">
+<form method="post" id="timelapse-form">
   {% csrf_token %}
   {% for field in form.visible_fields %}
     <div class="form-group">
@@ -22,8 +22,8 @@
   {% if images %}
     {% for img in images %}
       <div>
-        <img src="{{ img }}" alt="Timelapse frame">
-        <a href="{{ img }}" download class="download">Download</a>
+        <img src="{{ img.url }}" alt="Timelapse frame">
+        <a href="{{ img.url }}" download class="download">Download</a>
       </div>
     {% endfor %}
   {% else %}
@@ -32,4 +32,20 @@
 </div>
 
 <a href="{% url 'index' %}" class="back-link">← Back to dashboard</a>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('timelapse-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    await fetch("{% url 'timelapse_settings' %}", {
+      method: 'POST',
+      headers: {'X-CSRFToken': '{{ csrf_token }}'},
+      body: formData
+    });
+    // reload gallery after saving
+    window.location.reload();
+  };
+</script>
 {% endblock %}

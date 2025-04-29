@@ -15,6 +15,11 @@ ALLOWED_HOSTS = os.getenv(
     f"127.0.0.1,localhost,{os.getenv('DOMAIN','really.dont-use.com')}"
 ).split(',')
 
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    'DJANGO_CSRF_TRUSTED_ORIGINS',
+    f"https://{os.getenv('DOMAIN','really.dont-use.com')}"
+).split(',')
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',

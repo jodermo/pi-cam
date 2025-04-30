@@ -477,23 +477,35 @@ def timelapse_api(request):
     config, _ = AppConfigSettings.objects.get_or_create(pk=1)
     folder = config.timelapse_folder or 'timelapse'
     tl_dir = os.path.join(settings.MEDIA_ROOT, folder)
+
     if not os.path.isdir(tl_dir):
-        return JsonResponse([], safe=False) if request.method=="GET" else JsonResponse({'deleted':0})
+        return JsonResponse(
+            [] if request.method=="GET" else {'deleted': 0},
+            safe=False
+        )
+
     files = sorted(
         [f for f in os.listdir(tl_dir) if f.lower().endswith(('.jpg','.jpeg','.png'))],
         reverse=True
     )
-    if request.method=="DELETE":
-        count=0
+
+    if request.method == "DELETE":
+        count = 0
         for fn in files:
             try:
-                os.remove(os.path.join(tl_dir,fn)); count+=1
-            except: pass
+                os.remove(os.path.join(tl_dir, fn))
+                count += 1
+            except:
+                pass
         return JsonResponse({'deleted': count})
+
+    # build correct URL: strip only “/” then join
+    base = settings.MEDIA_URL.rstrip('/')    # e.g. "/media"
     data = [{
-        'filename':f,
-        'url':settings.MEDIA_URL.rstrip(f'/{folder}')+f'/{folder}/'+f
+        'filename': f,
+        'url': f"{base}/{folder}/{f}"
     } for f in files]
+
     return JsonResponse(data, safe=False)
 
 

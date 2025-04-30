@@ -20,6 +20,8 @@ from django.http import (
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.views.decorators.http import require_http_methods
+
 from django.conf import settings
 from django import forms
 
@@ -427,62 +429,72 @@ def media_browser(request):
     return render(request, 'controller/media_browser.html', {'images': images})
 
 @login_required
-def media_list_api(request):
+@csrf_exempt
+@require_http_methods(["GET","DELETE"])
+def photos_api(request):
     photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
     if not os.path.isdir(photos_dir):
-        return JsonResponse([], safe=False)
-
+        return JsonResponse([], safe=False) if request.method=="GET" else JsonResponse({'deleted':0})
     files = sorted(
         [f for f in os.listdir(photos_dir) if f.lower().endswith(('.jpg','.jpeg','.png'))],
         reverse=True
     )
-
-    data = [
-        {
-            'filename': f,
-            'url': settings.MEDIA_URL.rstrip('/') + '/photos/' + f
-        }
-        for f in files
-    ]
+    if request.method == "DELETE":
+        count=0
+        for fn in files:
+            try:
+                os.remove(os.path.join(photos_dir, fn)); count+=1
+            except: pass
+        return JsonResponse({'deleted': count})
+    # GET:
+    data = [{'filename':f,'url':settings.MEDIA_URL.rstrip('/')+'/photos/'+f} for f in files]
     return JsonResponse(data, safe=False)
 
 
-
 @login_required
-def video_list_api(request):
-    """Return JSON list of recordings under MEDIA_ROOT/videos/"""
+@csrf_exempt
+@require_http_methods(["GET","DELETE"])
+def video_api(request):
     vids_dir = os.path.join(settings.MEDIA_ROOT, 'videos')
     if not os.path.isdir(vids_dir):
-        return JsonResponse([], safe=False)
-    files = sorted(
-        [f for f in os.listdir(vids_dir) if f.lower().endswith(('.mp4'))],
-        reverse=True
-    )
-    data = [{
-        'filename': f,
-        'url': settings.MEDIA_URL.rstrip('/') + '/videos/' + f
-    } for f in files]
+        return JsonResponse([], safe=False) if request.method=="GET" else JsonResponse({'deleted':0})
+    files = sorted([f for f in os.listdir(vids_dir) if f.lower().endswith('.mp4')], reverse=True)
+    if request.method=="DELETE":
+        count=0
+        for fn in files:
+            try:
+                os.remove(os.path.join(vids_dir,fn)); count+=1
+            except: pass
+        return JsonResponse({'deleted': count})
+    data = [{'filename':f,'url':settings.MEDIA_URL.rstrip('/')+'/videos/'+f} for f in files]
     return JsonResponse(data, safe=False)
 
 
 @login_required
-def timelapse_list_api(request):
-    """Return JSON list of timelapse frames under MEDIA_ROOT/<folder>/"""
+@csrf_exempt
+@require_http_methods(["GET","DELETE"])
+def timelapse_api(request):
     config, _ = AppConfigSettings.objects.get_or_create(pk=1)
     folder = config.timelapse_folder or 'timelapse'
     tl_dir = os.path.join(settings.MEDIA_ROOT, folder)
     if not os.path.isdir(tl_dir):
-        return JsonResponse([], safe=False)
+        return JsonResponse([], safe=False) if request.method=="GET" else JsonResponse({'deleted':0})
     files = sorted(
         [f for f in os.listdir(tl_dir) if f.lower().endswith(('.jpg','.jpeg','.png'))],
         reverse=True
     )
+    if request.method=="DELETE":
+        count=0
+        for fn in files:
+            try:
+                os.remove(os.path.join(tl_dir,fn)); count+=1
+            except: pass
+        return JsonResponse({'deleted': count})
     data = [{
-        'filename': f,
-        'url': settings.MEDIA_URL.rstrip('/') + f'/{folder}/' + f
+        'filename':f,
+        'url':settings.MEDIA_URL.rstrip(f'/{folder}')+f'/{folder}/'+f
     } for f in files]
     return JsonResponse(data, safe=False)
-
 
 
 

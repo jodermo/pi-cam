@@ -1,73 +1,102 @@
 {% extends "controller/base.html" %}
-{% load static %}
 
 {% block title %}Dashboard - USB Camera Controller{% endblock %}
-{% block head %}
-<style>
-  .controls { margin-top: 1.5em; }
-  .controls form { display: inline-block; margin-right: 1em; margin-bottom: 1em; }
-  label { margin-right: 0.5em; }
-  input[type="number"] { width: 4em; }
-  img.stream { width: 100%; max-height: 400px; border: 1px solid #ccc; }
-  .actions { margin-top: 2em; }
-  .actions button, .actions form button { background: #28a745; }
-  .camera-error { color: white; background: #d9534f; padding: 0.5em 1em; border-radius: 4px; margin-bottom: 1em; }
-</style>
+{% block header %}
+<div class="header-bar">
+  <h1>USB Camera Controller</h1>
+  <div class="status-indicator" id="camera-status"></div>
+</div>
 {% endblock %}
 
-{% block header %}USB Camera Controller{% endblock %}
-
 {% block content %}
-<div class="controls">
-  <h2>Choose Camera</h2>
-  {% if camera_list %}
-    <form method="post" id="camera-form" action="{% url 'switch_camera' idx=0 %}">
-      {% csrf_token %}
-      <label for="camera-select">Source:</label>
-      <select id="camera-select" name="idx" onchange="updateCameraForm(this.value);">
-        {% for src in camera_list %}
-          <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>{{ src }}</option>
-        {% endfor %}
-      </select>
-    </form>
-  {% else %}
-    <p>No cameras available.</p>
-  {% endif %}
-</div>
+<div class="dashboard-grid">
 
-<img class="stream" src="{{ stream_url }}" alt="Live camera stream" />
-
-<div class="controls">
-  <h2>Adjust Settings</h2>
-  {% for setting in settings_fields %}
-    <div class="setting-row">
-      <label for="id_{{ setting.name }}">{{ setting.name|capfirst }}:</label>
-      <input id="id_{{ setting.name }}" type="number" min="0" max="255" value="{{ setting.value }}" onchange="syncSlider('{{ setting.name }}', this.value)" />
-      <input id="slider_{{ setting.name }}" type="range" min="0" max="255" value="{{ setting.value }}" onchange="syncInput('{{ setting.name }}', this.value)" />
-      <button type="button" onclick="submitSetting('{{ setting.name }}')">Set</button>
+  <!-- Live Stream Card -->
+  <div class="card stream-card">
+    <div class="stream-wrapper">
+      <img class="stream" src="{{ stream_url }}" alt="Live camera stream" />
     </div>
-  {% endfor %}
-  <form method="post" action="{% url 'set_setting' 'auto_exposure' %}">
-    {% csrf_token %}
-    <label for="id_auto_exposure">Auto Exposure:</label>
-    <input id="id_auto_exposure" type="checkbox" name="value" value="1" {% if db_settings.auto_exposure %}checked{% endif %} onchange="this.form.submit()" />
-  </form>
-</div>
+  </div>
 
-<div class="actions">
-  <h2>Actions</h2>
-  <button onclick="postAction('{% url 'restart' %}')">Restart Camera</button>
-  <button onclick="postAction('{% url 'capture_photo' %}', true)">Capture Photo</button>
-  <button onclick="postAction('{% url 'start_recording' %}')">Start Recording</button>
-  <button onclick="postAction('{% url 'stop_recording' %}')">Stop Recording</button>
-  <div id="recording-status"></div>
-  <div id="last-video-block"></div>
+  <!-- Settings Card -->
+  <div class="card control-card span-2">
+    <h2>Image Settings</h2>
+    <div class="settings-grid">
+      {% for setting in settings_fields %}
+        <div class="setting-row">
+          <label for="id_{{ setting.name }}">{{ setting.name|capfirst }}</label>
+          <input id="id_{{ setting.name }}" type="number" min="0" max="255" value="{{ setting.value }}" onchange="syncSlider('{{ setting.name }}', this.value)" />
+          <input id="slider_{{ setting.name }}" type="range" min="0" max="255" value="{{ setting.value }}" onchange="syncInput('{{ setting.name }}', this.value)" />
+          <button class="btn-small" onclick="submitSetting('{{ setting.name }}')">Set</button>
+        </div>
+      {% endfor %}
+      <div class="setting-row checkbox-row">
+        <label for="id_auto_exposure">Auto Exposure</label>
+        <form method="post" action="{% url 'set_setting' 'auto_exposure' %}">
+          {% csrf_token %}
+          <input id="id_auto_exposure" type="checkbox" name="value" value="1" {% if db_settings.auto_exposure %}checked{% endif %} onchange="this.form.submit()" />
+        </form>
+      </div>
+    </div>
+  </div>
+
+
 </div>
 
 <div id="camera-error" class="camera-error" style="display:none;"></div>
 <div id="health-check-error" class="camera-error" style="display:none;"></div>
-<div id="camera-recovered" class="camera-error" style="display:none; background:#5cb85c;">
+<div id="camera-recovered" class="camera-error recovered" style="display:none;">
   Camera recovered
+</div>
+{% endblock %}
+
+
+
+{% block actions %}
+<div class="app-actions camera-actions">
+  <!-- Actions Card -->
+  <div class="card actions-card span-2">
+
+    <div class="camera-source">
+      {% if camera_list %}
+        <form id="camera-form" class="camera-select" method="post" action="{% url 'switch_camera' idx=0 %}">
+          {% csrf_token %}
+          <select id="camera-select" name="idx" onchange="updateCameraForm(this.value);">
+            {% for src in camera_list %}
+              <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>{{ src }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      {% else %}
+        <p class="muted">No cameras available.</p>
+      {% endif %}
+    </div>
+
+    <div class="actions-grid">
+      <button class="btn-action" onclick="postAction('{% url 'restart' %}')">
+        <span class="icon">&#x21bb;</span>
+        Restart
+      </button>
+      <button class="btn-action" onclick="postAction('{% url 'capture_photo' %}', true)">
+        <span class="icon">&#x1f4f7;</span>
+        Snapshot
+      </button>
+      <button class="btn-action" onclick="postAction('{% url 'start_recording' %}')">
+        <span class="icon">&#x23fa;</span>
+        Record
+      </button>
+      <button class="btn-action" onclick="postAction('{% url 'stop_recording' %}')">
+        <span class="icon">&#x23f9;</span>
+        Stop
+      </button>
+
+      <div class="status-bar">
+        <div id="recording-status"></div>
+        <div id="last-video-block"></div>
+      </div>
+    </div>
+
+  </div>
 </div>
 {% endblock %}
 
@@ -87,8 +116,8 @@ function submitSetting(name) {
 function postAction(url, isPhoto=false) {
   fetch(url,{method:'POST',headers:{'X-CSRFToken':'{{ csrf_token }}'}})
     .then(res=>res.ok?isPhoto?res.blob():res.json():res.json().then(e=>{throw e;}))
-    .then(data=>{/*handle UI*/})
-    .catch(e=>{/*error*/});
+    .then(data=>{/* TODO: update UI based on data */})
+    .catch(e=>{/* TODO: show error */});
 }
 </script>
 {% endblock %}

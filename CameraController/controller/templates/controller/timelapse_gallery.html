@@ -1,121 +1,106 @@
 {% extends "controller/base.html" %}
-{% load static %}
 
 {% block title %}Timelapse Gallery{% endblock %}
 
 {% block content %}
-
-<h1>Timelapse Gallery</h1>
-
-<form method="post" class="form-panel">
-  {% csrf_token %}
-  <div class="form-grid">
-    {% for field in form.visible_fields %}
-      <div>
-        {{ field.label_tag }}
-        {{ field }}
-        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-        {% for err in field.errors %}<div class="error">{{ err }}</div>{% endfor %}
+<div class="timelapse-container">
+  <!-- Settings Card -->
+  <section class="card form-panel settings-panel">
+    <h2 class="card-title">Timelapse Settings</h2>
+    <form method="post" class="form-grid">
+      {% csrf_token %}
+      {% for field in form.visible_fields %}
+        <div class="form-group">
+          {{ field.label_tag }}
+          {{ field }}
+          {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+          {% for err in field.errors %}<div class="error">{{ err }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+      <div class="form-actions">
+        <button type="submit" class="btn-action">Save Settings</button>
       </div>
-    {% endfor %}
-    <div>
-      <button type="submit">Save Settings</button>
-    </div>
-  </div>
-</form>
+    </form>
+  </section>
 
-<section class="timelapse-viewer">
-  <div class="player">
-    <canvas id="timelapse-canvas"></canvas>
-    <div class="player-controls">
-      <button id="play-pause">Play</button>
-      <label for="speed-number">Speed (ms/frame):</label>
-      <input id="speed-number" type="number" min="25" value="500" />
-      <label for="speed-slider">Adjust Speed:</label>
-      <input id="speed-slider" type="range" min="25" max="2000" step="50" value="500" />
-    </div>
-  </div>
+   <!-- Viewer Card -->
 
+  <section class="card timelapse-viewer">
+    <div class="player">
+      <canvas id="timelapse-canvas"></canvas>
+    </div>
+
+
+  </section>
+ 
+</div>
+{% endblock %}
+
+{% block actions %}
+
+<div class="app-actions timelapse-actions">
+  <div class="player-controls">
+    <button id="play-pause" class="btn-action">Play</button>
+    <label for="speed-number">Speed (ms/frame):</label>
+    <input id="speed-number" type="number" min="25" value="500" class="input-field speed-input" />
+    <input id="speed-slider" type="range" min="25" max="2000" step="50" value="500" class="speed-slider" />
+  </div>
   <div class="thumbnail-container">
-    <button class="thumb-nav prev">&laquo;</button>
+    <button class="thumb-nav prev" title="Previous Frame">&laquo;</button>
     <div class="thumbnails">
       {% for url in images reversed %}
-        <img class="thumb" data-index="{{ forloop.counter0 }}" src="{{ url }}?{{ forloop.counter0 }}" alt="frame {{ forloop.counter }}" />
+        <img class="thumb" data-index="{{ forloop.counter0 }}" src="{{ url }}?{{ forloop.counter0 }}" alt="Frame {{ forloop.counter }}" />
       {% endfor %}
     </div>
-    <button class="thumb-nav next">&raquo;</button>
+    <button class="thumb-nav next" title="Next Frame">&raquo;</button>
   </div>
-</section>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-  (function(){
-    const urls = [{% for url in images reversed %}"{{ url }}?{{ forloop.counter0 }}",{% endfor %}];
-    const canvas = document.getElementById('timelapse-canvas');
-    const ctx = canvas.getContext('2d');
-    const playBtn = document.getElementById('play-pause');
-    const speedNum = document.getElementById('speed-number');
-    const speedSlider = document.getElementById('speed-slider');
-    const thumbs = Array.from(document.querySelectorAll('.thumb'));
-    const thumbStrip = document.querySelector('.thumbnails');
-    let idx = 0, timer = null;
+(function(){
+  const urls = [{% for url in images reversed %}"{{ url }}?{{ forloop.counter0 }}",{% endfor %}];
+  const canvas = document.getElementById('timelapse-canvas');
+  const ctx = canvas.getContext('2d');
+  const playBtn = document.getElementById('play-pause');
+  const speedNum = document.getElementById('speed-number');
+  const speedSlider = document.getElementById('speed-slider');
+  const thumbs = Array.from(document.querySelectorAll('.thumb'));
+  const container = document.querySelector('.thumbnail-container');
+  const strip = document.querySelector('.thumbnails');
+  let idx = 0, timer = null;
 
-    function resizeCanvas(){
-      const w = canvas.parentElement.clientWidth;
-      canvas.width = w;
-      canvas.height = w * 3/4;
-    }
-    function drawFrame(i){
-      const img = new Image();
-      img.onload = ()=> {
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.drawImage(img, 0,0,canvas.width,canvas.height);
-      };
-      img.src = urls[i];
-      thumbs.forEach(t=> t.classList.toggle('active', +t.dataset.index===i));
-    }
-    function play(){
-      timer = setInterval(()=>{
-        idx = (idx+1) % urls.length;
-        drawFrame(idx);
-      }, +speedNum.value);
-      playBtn.textContent = 'Pause';
-    }
-    function pause(){
-      clearInterval(timer);
-      timer = null;
-      playBtn.textContent = 'Play';
-    }
-    playBtn.onclick = ()=> timer ? pause() : play();
+  function resizeCanvas(){
+    const r = canvas.parentElement.getBoundingClientRect();
+    canvas.width = r.width;
+    canvas.height = r.height;
+  }
 
-    // sync number and slider
-    speedNum.oninput = ()=> {
-      speedSlider.value = speedNum.value;
-      if(timer){ pause(); play(); }
-    };
-    speedSlider.oninput = ()=> {
-      speedNum.value = speedSlider.value;
-      if(timer){ pause(); play(); }
-    };
+  function drawFrame(i){
+    const img = new Image();
+    img.onload = ()=> { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width,canvas.height); };
+    img.src = urls[i];
+    thumbs.forEach(t=> t.classList.toggle('active', +t.dataset.index===i));
+    const active = thumbs.find(t=> +t.dataset.index===i);
+    if(active) active.scrollIntoView({ behavior:'smooth', inline:'center' });
+  }
 
-    thumbs.forEach(t=>{
-      t.onclick = ()=> {
-        idx = +t.dataset.index;
-        drawFrame(idx);
-      };
-    });
+  function play(){ timer = setInterval(()=>{ idx = (idx+1)%urls.length; drawFrame(idx); }, +speedNum.value); playBtn.textContent = 'Pause'; }
+  function pause(){ clearInterval(timer); timer = null; playBtn.textContent = 'Play'; }
+  playBtn.onclick = ()=> timer ? pause() : play();
 
-    document.querySelector('.thumb-nav.prev').onclick = ()=> {
-      thumbStrip.scrollBy({ left: -thumbStrip.clientWidth, behavior: 'smooth' });
-    };
-    document.querySelector('.thumb-nav.next').onclick = ()=> {
-      thumbStrip.scrollBy({ left: thumbStrip.clientWidth, behavior: 'smooth' });
-    };
+  speedNum.oninput = ()=>{ speedSlider.value = speedNum.value; if(timer){ pause(); play(); }};
+  speedSlider.oninput = ()=>{ speedNum.value = speedSlider.value; if(timer){ pause(); play(); }};
 
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-    drawFrame(0);
-  })();
+  thumbs.forEach(t=> t.onclick = ()=>{ idx = +t.dataset.index; drawFrame(idx); });
+
+  document.querySelector('.thumb-nav.prev').onclick = ()=> container.scrollBy({ left: -strip.clientWidth, behavior: 'smooth' });
+  document.querySelector('.thumb-nav.next').onclick = ()=> container.scrollBy({ left: strip.clientWidth, behavior: 'smooth' });
+
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas(); drawFrame(0);
+})();
 </script>
 {% endblock %}

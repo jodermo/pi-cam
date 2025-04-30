@@ -1,17 +1,21 @@
 /* controller/static/controller/styles.css */
 
 /*--------------------------------------
-  1. Variables & Global Reset
+  1. Theme Variables & Reset
 ---------------------------------------*/
 :root {
-  --clr-bg: #f9f9f9;
-  --clr-panel: #ffffff;
-  --clr-text: #333333;
-  --clr-border: #dddddd;
-  --clr-primary: #007bff;
-  --clr-primary-hover: #0056b3;
-  --clr-accent: #28a745;
-  --clr-error: #d9534f;
+  /* Colors */
+  --clr-bg: #121212;
+  --clr-panel: #1e1e1e;
+  --clr-text: #e0e0e0;
+  --clr-border: #333;
+  --clr-primary: #0d6efd;
+  --clr-primary-hover: #0b5ed7;
+  --clr-accent: #20c997;
+  --clr-error: #dc3545;
+  --clr-muted: #888;
+
+  /* Spacing & typography */
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
   --spacing-md: 1rem;
@@ -21,323 +25,164 @@
   --font-base: 1rem/1.6 "Segoe UI", Roboto, sans-serif;
 }
 
-*,
-*::before,
-*::after {
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
-
 body {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+
   font: var(--font-base);
   color: var(--clr-text);
   background: var(--clr-bg);
+
+  overflow: hidden;
+
+}
+
+.app-wrapper{
+  position: relative;
+  width: 100%;
   max-width: var(--max-width);
-  margin: var(--spacing-lg) auto;
-  padding: 0 var(--spacing-md);
+  margin: 0 auto;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.content{
+  position: relative;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.app-header{
+  position: relative;
+  width: 100%;
 }
 
 /*--------------------------------------
   2. Typography
 ---------------------------------------*/
-h1, h2 {
-  color: var(--clr-text);
-  margin-bottom: var(--spacing-md);
-}
-
-p {
-  margin-bottom: var(--spacing-md);
-  line-height: 1.6;
-}
+h1, h2 { color: var(--clr-text); margin-bottom: var(--spacing-md); }
+p { color: var(--clr-text); margin-bottom: var(--spacing-md); line-height: 1.6; }
 
 /*--------------------------------------
-  3. Layout Sections
+  3. Navigation
 ---------------------------------------*/
-header, nav, main, footer, section {
-  display: block;
-}
-
-/*--------------------------------------
-  4. Header & Nav
----------------------------------------*/
-header {
-  text-align: center;
-  margin-bottom: var(--spacing-lg);
-}
-
 nav {
   display: flex;
   justify-content: center;
-  gap: var(--spacing-md);
-  background: var(--clr-text);
-  padding: var(--spacing-sm);
-  border-radius: var(--radius);
   flex-wrap: wrap;
-}
-
-nav a {
-  color: #fff;
-  text-decoration: none;
-  padding: var(--spacing-sm) var(--spacing-md);
+  gap: var(--spacing-md);
+  background: var(--clr-panel);
+  padding: var(--spacing-sm);
+  border: 1px solid var(--clr-border);
   border-radius: var(--radius);
+  margin-bottom: var(--spacing-md);
 }
-
-nav a:hover,
-nav a.active {
-  background: var(--clr-primary);
-  text-decoration: underline;
-}
+nav a { color: var(--clr-text); text-decoration: none; padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--radius); }
+nav a:hover, nav a.active { background: var(--clr-primary); color: #fff; }
 
 /*--------------------------------------
-  5. Content Wrapper
+  4. Cards & Forms
 ---------------------------------------*/
-.content {
-  margin-top: var(--spacing-md);
-}
-
-/*--------------------------------------
-  6. Forms & Controls
----------------------------------------*/
-.form-panel,
-form {
+.card, .form-panel, form {
   background: var(--clr-panel);
   border: 1px solid var(--clr-border);
   border-radius: var(--radius);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
 }
-
 .form-grid {
   display: grid;
+  gap: var(--spacing-md);
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-md);
 }
-
-.form-grid label {
-  display: block;
-  margin-bottom: var(--spacing-xs);
-  font-weight: 600;
-}
-
-input[type="text"],
-input[type="number"],
-select {
-  width: 100%;
-  padding: var(--spacing-sm);
+.form-grid label { display: block; margin-bottom: var(--spacing-xs); font-weight: 600; }
+.input-field, input[type="text"], input[type="number"], select {
+  width: 100%; padding: var(--spacing-sm);
   border: 1px solid var(--clr-border);
   border-radius: var(--radius);
-  font: inherit;
+  background: #2a2a2a; color: var(--clr-text);
 }
-
-button {
-  background: var(--clr-primary);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius);
-  padding: var(--spacing-sm) var(--spacing-md);
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-button:hover {
-  background: var(--clr-primary-hover);
-}
-
-.error {
-  color: var(--clr-error);
-  font-size: 0.9em;
-  margin-top: var(--spacing-xs);
-}
+.btn-action, button { background: var(--clr-primary); color: #fff; border: none; border-radius: var(--radius); padding: var(--spacing-sm) var(--spacing-md); cursor: pointer; font-size: 1rem; }
+.btn-action:hover, button:hover { background: var(--clr-primary-hover); }
+.error { color: var(--clr-error); font-size: 0.9em; margin-top: var(--spacing-xs); }
 
 /*--------------------------------------
-  7. Camera Controls (index.html)
+  5. Timelapse Viewer
 ---------------------------------------*/
-.controls {
-  margin-top: var(--spacing-lg);
+.timelapse-container {
+  display: flex; flex-direction: column;
+  height: calc(100vh - 60px);
 }
-
-.setting-row {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
-}
-
-.setting-row label {
-  min-width: 80px;
-}
-
-img.stream {
-  width: 100%;
-  max-height: 400px;
-  border: 1px solid var(--clr-border);
-  border-radius: var(--radius);
-}
-
-/*--------------------------------------
-  8. Gallery (media & timelapse)
----------------------------------------*/
-.gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-md);
-}
-
-.gallery-item {
+.timelapse-viewer {
+  display: flex; flex-direction: column;
   background: var(--clr-panel);
   border: 1px solid var(--clr-border);
-  border-radius: var(--radius);
-  padding: var(--spacing-sm);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.gallery-item img,
-.gallery-item video {
-  width: 100%;
-  height: auto;
-  border-radius: var(--radius);
-}
-
-.gallery-item .download,
-.gallery-item .delete {
-  margin-top: var(--spacing-xs);
-  font-size: 0.9rem;
-  text-decoration: none;
-  background: none;
-  border: none;
-  color: var(--clr-primary);
-  cursor: pointer;
-}
-
-.gallery-item .download:hover,
-.gallery-item .delete:hover {
-  text-decoration: underline;
-}
-
-/*--------------------------------------
-  9. Error & Status Messages
----------------------------------------*/
-.camera-error {
-  color: #fff;
-  background: var(--clr-error);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius);
-  margin-bottom: var(--spacing-md);
-}
-
-.camera-error.recovered {
-  background: var(--clr-accent);
-}
-
-/*--------------------------------------
- 10. Back Link
----------------------------------------*/
-a.back-link {
-  display: inline-block;
-  margin-top: var(--spacing-lg);
-  color: var(--clr-primary);
-  text-decoration: none;
-}
-
-a.back-link:hover {
-  text-decoration: underline;
-}
-
-
-/* Timelapse Viewer */
-.timelapse-viewer {
-  margin-top: var(--spacing-lg);
-}
-
-.player {
-  position: relative;
-  background: var(--clr-border);
   border-radius: var(--radius);
   overflow: hidden;
+  flex: 1;
 }
+.player { background: #000; flex: 1; display: flex; align-items: center; justify-content: center; }
+#timelapse-canvas { width: 100%; height: auto; }
+.player-controls { display: flex; align-items: center; gap: var(--spacing-sm); padding: var(--spacing-sm); background: var(--clr-panel); }
 
-#timelapse-canvas {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.player-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm);
-  background: var(--clr-panel);
-}
-
-.player-controls button {
-  flex-shrink: 0;
-}
-
+/*--------------------------------------
+  6. Thumbnail Strip
+---------------------------------------*/
 .thumbnail-container {
+  position: relative;
   display: flex;
   align-items: center;
-  margin-top: var(--spacing-md);
+  background: var(--clr-panel);
+  padding: var(--spacing-sm);
+  overflow: hidden;
 }
-
-.thumb-nav {
-  background: var(--clr-primary);
-  color: #fff;
-  border: none;
-  padding: var(--spacing-sm) var(--spacing-md);
-  cursor: pointer;
-  border-radius: var(--radius);
-  flex-shrink: 0;
-}
-
-.thumb-nav:hover {
-  background: var(--clr-primary-hover);
-}
-
 .thumbnails {
   display: flex;
-  overflow-x: auto;
   gap: var(--spacing-xs);
-  padding: var(--spacing-sm) 0;
-  margin: 0 var(--spacing-sm);
   scroll-behavior: smooth;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
 }
-
 .thumb {
-  width: 120px;
-  height: auto;
+  flex: 0 0 auto;
+  width: 100px;
   cursor: pointer;
   border: 2px solid transparent;
   border-radius: var(--radius);
-  flex-shrink: 0;
 }
-
-.thumb.active {
-  border-color: var(--clr-accent);
+.thumb.active { border-color: var(--clr-accent); }
+.thumb-nav {
+  position: absolute;
+  top: 50%; transform: translateY(-50%);
+  background: var(--clr-primary);
+  color: #fff;
+  border: none;
+  padding: var(--spacing-xs) var(--spacing-md);
+  cursor: pointer;
+  border-radius: var(--radius);
+  z-index: 1;
 }
-
-
+.thumb-nav.prev { left: var(--spacing-sm); }
+.thumb-nav.next { right: var(--spacing-sm); }
+.thumb-nav:hover { background: var(--clr-primary-hover); }
 
 /*--------------------------------------
- 11. Responsive Adjustments
+  7. Responsive
 ---------------------------------------*/
 @media (max-width: 480px) {
-  body {
-    padding: 0 var(--spacing-sm);
-  }
-  nav {
-    flex-direction: column;
-    gap: var(--spacing-sm);
-  }
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-  .setting-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+  .form-grid { grid-template-columns: 1fr; }
+  .thumbnail-container { padding: var(--spacing-xs); }
+  .thumb { width: 80px; }
 }

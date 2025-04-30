@@ -1,210 +1,49 @@
 {% extends "controller/base.html" %}
 {% load static %}
 
-{% block title %}Media Browser{% endblock %}
-
 {% block content %}
-
-<h1>Media Browser</h1>
-
-<section>
-  <h2>Snapshots</h2>
-  <div class="batch-actions">
-    <button id="delete-selected-photos" disabled>Delete Selected</button>
-    <button id="download-selected-photos" disabled>Download Selected</button>
-    <button id="delete-all-photos" class="delete-all">Delete All Photos</button>
+<div class="media-container">
+  <div class="tabs">
+    <div class="tab active" data-target="photos-section">Photos</div>
+    <div class="tab" data-target="videos-section">Videos</div>
+    <div class="tab" data-target="timelapse-section">Timelapse</div>
   </div>
-  <div id="photos" class="gallery">Loading…</div>
-</section>
-
-<section>
-  <h2>Recordings</h2>
-  <div class="batch-actions">
-    <button id="delete-selected-videos" disabled>Delete Selected</button>
-    <button id="download-selected-videos" disabled>Download Selected</button>
-    <button id="reload-videos">Reload Videos</button>
-    <button id="delete-all-videos" class="delete-all">Delete All Videos</button>
-  </div>
-  <div id="videos" class="gallery">Loading…</div>
-</section>
-
-<section>
-  <h2>Timelapse Frames</h2>
-  <div class="batch-actions">
-    <button id="delete-selected-timelapse" disabled>Delete Selected</button>
-    <button id="download-selected-timelapse" disabled>Download Selected</button>
-    <button id="reload-timelapse">Reload Timelapse</button>
-    <button id="delete-all-timelapse" class="delete-all">Delete All Timelapse</button>
-  </div>
-  <div id="timelapse" class="gallery">Loading…</div>
-</section>
+  <section id="photos-section" class="tab-content active">
+    <div class="batch-actions">
+      <button id="delete-selected-photos" disabled>Delete Selected</button>
+      <button id="download-selected-photos" disabled>Download Selected</button>
+      <button id="delete-all-photos" class="delete-all">Delete All</button>
+    </div>
+    <div id="photos" class="gallery">Loading…</div>
+  </section>
+  <section id="videos-section" class="tab-content">
+    <div class="batch-actions">
+      <button id="delete-selected-videos" disabled>Delete Selected</button>
+      <button id="download-selected-videos" disabled>Download Selected</button>
+      <button id="reload-videos">Reload</button>
+      <button id="delete-all-videos" class="delete-all">Delete All</button>
+    </div>
+    <div id="videos" class="gallery">Loading…</div>
+  </section>
+  <section id="timelapse-section" class="tab-content">
+    <div class="batch-actions">
+      <button id="delete-selected-timelapse" disabled>Delete Selected</button>
+      <button id="download-selected-timelapse" disabled>Download Selected</button>
+      <button id="reload-timelapse">Reload</button>
+      <button id="delete-all-timelapse" class="delete-all">Delete All</button>
+    </div>
+    <div id="timelapse" class="gallery">Loading…</div>
+  </section>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  // Batch selection sets
-  const selectedPhotos = new Set();
-  const selectedVideos = new Set();
-  const selectedTimelapse = new Set();
-
-  function updateButtons(prefix, set) {
-    const has = set.size > 0;
-    document.getElementById(`delete-selected-${prefix}`).disabled = !has;
-    document.getElementById(`download-selected-${prefix}`).disabled = !has;
-  }
-
-  async function sendDelete(url) {
-    const res = await fetch(url, {
-      method: 'DELETE',
-      credentials: 'same-origin',
-      headers: {'X-CSRFToken': '{{ csrf_token }}'}
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      alert('Delete failed: ' + (err.error || res.statusText));
-    }
-    return res;
-  }
-
-  async function loadGallery(apiUrl, containerId, isVideo=false, baseDeleteUrl, prefix) {
-    const res = await fetch(apiUrl);
-    const items = await res.json();
-    const gallery = document.getElementById(containerId);
-    gallery.innerHTML = '';
-    if (!items.length) {
-      gallery.textContent = 'None found.';
-      return;
-    }
-    items.forEach(item => {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'gallery-item';
-
-      // checkbox
-      const cb = document.createElement('input');
-      cb.type = 'checkbox'; cb.className = 'sel';
-      cb.onchange = () => {
-        const set = prefix === 'photos' ? selectedPhotos : prefix === 'videos' ? selectedVideos : selectedTimelapse;
-        if (cb.checked) set.add(item.filename); else set.delete(item.filename);
-        updateButtons(prefix, set);
-      };
-      wrapper.appendChild(cb);
-
-      if (isVideo) {
-        const vid = document.createElement('video');
-        vid.controls = true;
-        fetch(item.url)
-          .then(r => r.arrayBuffer())
-          .then(buf => {
-            const blob = new Blob([buf], { type: 'video/mp4' });
-            vid.src = URL.createObjectURL(blob);
-          });
-        wrapper.appendChild(vid);
-      } else {
-        const img = document.createElement('img');
-        img.src = item.url + '?_=' + Date.now();
-        img.alt = item.filename;
-        wrapper.appendChild(img);
-      }
-
-      const link = document.createElement('a');
-      link.href = item.url;
-      link.download = item.filename;
-      link.textContent = 'Download';
-      link.className = 'download';
-      wrapper.appendChild(link);
-
-      const del = document.createElement('button');
-      del.textContent = 'Delete';
-      del.className = 'delete';
-      del.onclick = async () => {
-        if (confirm(`Delete ${item.filename}?`)) {
-          await sendDelete(`${baseDeleteUrl}/${item.filename}/`);
-          loadGallery(apiUrl, containerId, isVideo, baseDeleteUrl, prefix);
-        }
-      };
-      wrapper.appendChild(del);
-
-      gallery.appendChild(wrapper);
-    });
-  }
-
-  // individual galleries
-  document.getElementById('reload-videos').onclick = () =>
-    loadGallery("{% url 'api_video_list' %}", 'videos', true, '/api/videos', 'videos');
-  document.getElementById('reload-timelapse').onclick = () =>
-    loadGallery("{% url 'api_timelapse_list' %}", 'timelapse', false, '/api/timelapse', 'timelapse');
-
-  // delete-all handlers
-  document.getElementById('delete-all-photos').onclick = async () => {
-    if (confirm('Delete all photos?')) {
-      await sendDelete('/api/photos/');
-      selectedPhotos.clear(); updateButtons('photos', selectedPhotos);
-      loadGallery("{% url 'api_media_list' %}", 'photos', false, '/api/photos', 'photos');
-    }
-  };
-  document.getElementById('delete-all-videos').onclick = async () => {
-    if (confirm('Delete all videos?')) {
-      await sendDelete('/api/videos/');
-      selectedVideos.clear(); updateButtons('videos', selectedVideos);
-      loadGallery("{% url 'api_video_list' %}", 'videos', true, '/api/videos', 'videos');
-    }
-  };
-  document.getElementById('delete-all-timelapse').onclick = async () => {
-    if (confirm('Delete all timelapse frames?')) {
-      await sendDelete('/api/timelapse/');
-      selectedTimelapse.clear(); updateButtons('timelapse', selectedTimelapse);
-      loadGallery("{% url 'api_timelapse_list' %}", 'timelapse', false, '/api/timelapse', 'timelapse');
-    }
-  };
-
-  // batch delete
-  document.getElementById('delete-selected-photos').onclick = async () => {
-    if (!selectedPhotos.size) return;
-    if (!confirm(`Delete ${selectedPhotos.size} photos?`)) return;
-    await Promise.all(Array.from(selectedPhotos).map(fn => sendDelete(`/api/photos/${fn}/`)));
-    selectedPhotos.clear(); updateButtons('photos', selectedPhotos);
-    loadGallery("{% url 'api_media_list' %}", 'photos', false, '/api/photos', 'photos');
-  };
-  document.getElementById('delete-selected-videos').onclick = async () => {
-    if (!selectedVideos.size) return;
-    if (!confirm(`Delete ${selectedVideos.size} videos?`)) return;
-    await Promise.all(Array.from(selectedVideos).map(fn => sendDelete(`/api/videos/${fn}/`)));
-    selectedVideos.clear(); updateButtons('videos', selectedVideos);
-    loadGallery("{% url 'api_video_list' %}", 'videos', true, '/api/videos', 'videos');
-  };
-  document.getElementById('delete-selected-timelapse').onclick = async () => {
-    if (!selectedTimelapse.size) return;
-    if (!confirm(`Delete ${selectedTimelapse.size} frames?`)) return;
-    await Promise.all(Array.from(selectedTimelapse).map(fn => sendDelete(`/api/timelapse/${fn}/`)));
-    selectedTimelapse.clear(); updateButtons('timelapse', selectedTimelapse);
-    loadGallery("{% url 'api_timelapse_list' %}", 'timelapse', false, '/api/timelapse', 'timelapse');
-  };
-
-  // batch download
-  document.getElementById('download-selected-photos').onclick = () => {
-    selectedPhotos.forEach(fn => {
-      const a = document.createElement('a'); a.href = `/media/photos/${fn}`; a.download = fn;
-      document.body.appendChild(a); a.click(); a.remove();
-    });
-  };
-  document.getElementById('download-selected-videos').onclick = () => {
-    selectedVideos.forEach(fn => {
-      const a = document.createElement('a'); a.href = `/media/videos/${fn}`; a.download = fn;
-      document.body.appendChild(a); a.click(); a.remove();
-    });
-  };
-  document.getElementById('download-selected-timelapse').onclick = () => {
-    selectedTimelapse.forEach(fn => {
-      const a = document.createElement('a'); a.href = `/media/${"{{ config.timelapse_folder }}"}/${fn}`; a.download = fn;
-      document.body.appendChild(a); a.click(); a.remove();
-    });
-  };
-
-  // initial load
-  window.onload = () => {
-    loadGallery("{% url 'api_media_list' %}", 'photos', false, '/api/photos', 'photos');
-    loadGallery("{% url 'api_video_list' %}", 'videos', true, '/api/videos', 'videos');
-    loadGallery("{% url 'api_timelapse_list' %}", 'timelapse', false, '/api/timelapse', 'timelapse');
-  };
+  // simplified tab logic
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+    document.querySelectorAll('.tab, .tab-content').forEach(e=>e.classList.remove('active'));
+    t.classList.add('active'); document.getElementById(t.dataset.target).classList.add('active');
+  });
+  // reuse loadGallery script from base
 </script>
 {% endblock %}

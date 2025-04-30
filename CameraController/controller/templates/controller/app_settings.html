@@ -3,9 +3,7 @@
 
 {% block title %}Application Settings{% endblock %}
 
-
 {% block content %}
-<h1>Application Settings</h1>
 <form method="post">
   {% csrf_token %}
   {% for field in form %}
@@ -22,5 +20,4 @@
   {% endfor %}
   <button type="submit">Save Settings</button>
 </form>
-<a href="{% url 'index' %}" class="back-link">← Back to dashboard</a>
 {% endblock %}

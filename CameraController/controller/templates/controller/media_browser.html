@@ -37,6 +37,7 @@
   async function sendDelete(url) {
     const res = await fetch(url, {
       method: 'DELETE',
+      credentials: 'same-origin',
       headers: {'X-CSRFToken': '{{ csrf_token }}'}
     });
     if (!res.ok) {

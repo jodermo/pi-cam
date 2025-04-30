@@ -111,7 +111,7 @@
 
   document.getElementById('delete-all-photos').onclick = async () => {
     if (confirm('Delete all photos?')) {
-      await sendDelete('/api/photos/delete-all()');
+      await sendDelete('/api/photos/');
       loadGallery("{% url 'api_media_list' %}", 'photos', false, '/api/photos');
     }
   };
@@ -121,7 +121,7 @@
 
   document.getElementById('delete-all-videos').onclick = async () => {
     if (confirm('Delete all videos?')) {
-      await sendDelete('/api/videos/delete-all(');
+      await sendDelete('/api/videos/');
       loadGallery("{% url 'api_video_list' %}", 'videos', true, '/api/videos');
     }
   };
@@ -131,7 +131,7 @@
 
   document.getElementById('delete-all-timelapse').onclick = async () => {
     if (confirm('Delete all timelapse frames?')) {
-      await sendDelete('/api/timelapse/delete-all(');
+      await sendDelete('/api/timelapse/');
       loadGallery("{% url 'api_timelapse_list' %}", 'timelapse', false, '/api/timelapse');
     }
   };

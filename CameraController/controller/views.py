@@ -8,20 +8,22 @@ import time
 import tempfile
 import base64
 import requests
+import subprocess
 from datetime import datetime
-
+import zipfile
 from django.shortcuts import render, redirect
 from django.http import (
     JsonResponse,
     HttpResponse,
     HttpResponseBadRequest,
-    HttpResponseServerError
+    HttpResponseServerError,
+    FileResponse, 
+    Http404
 )
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
-from django.views.decorators.http import require_http_methods
-
+from django.views.decorators.http import require_http_methods, require_POST
 from django.conf import settings
 from django import forms
 
@@ -140,11 +142,11 @@ def index(request):
         rel = rel.replace('\\', '/')
         last_video_url = settings.MEDIA_URL.rstrip('/') + '/' + rel
 
-    return render(request, 'controller/index.html', {
+    return render(request, 'controller/camera.html', {
         'stream_url': STREAM_PATH,
         'settings_fields': settings_list,
         'db_settings': db_settings,
-        'camera_list': camera_list,
+        'camera_list'    : camera_list if len(camera_list) > 1 else None,
         'active_index': active_index,
         'is_recording': is_recording,
         'last_video_url': last_video_url,
@@ -614,3 +616,193 @@ def delete_all_timelapse(request):
             except:
                 pass
     return JsonResponse({'status':'deleted_all','count': count})
+
+
+@login_required
+@require_POST
+def download_timelapse(request):
+    # 1. Load timelapse folder and speed settings
+    config, _ = AppConfigSettings.objects.get_or_create(pk=1)
+    folder = config.timelapse_folder or 'timelapse_frames'
+    
+    # ms/frame from POST, fallback to interval (min) or 500ms
+    try:
+        speed_ms = int(request.POST.get(
+            'speed_ms',
+            (config.timelapse_interval_minutes * 60 * 1000) if config.timelapse_interval_minutes else 500
+        ))
+    except (ValueError, TypeError):
+        speed_ms = 500
+    fps = max(1, int(1000 / speed_ms))
+
+    # 2. Locate frames
+    frame_dir = os.path.join(settings.MEDIA_ROOT, folder)
+    if not os.path.isdir(frame_dir):
+        raise Http404(f"Timelapse folder '{folder}' not found.")
+    frames = sorted(
+        os.path.join(frame_dir, f)
+        for f in os.listdir(frame_dir)
+        if f.lower().endswith(('.jpg', '.jpeg', '.png'))
+    )
+    if not frames:
+        raise Http404("No timelapse frames found.")
+
+    # 3. Create temp output and list file
+    tmp = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False)
+    tmp_path = tmp.name
+    tmp.close()
+    list_txt = tmp_path + '.txt'
+    with open(list_txt, 'w') as f:
+        for frame in frames:
+            f.write(f"file '{frame}'\n")
+
+    # 4. Try generating with concat demuxer
+    concat_cmd = [
+        'ffmpeg', '-f', 'concat', '-safe', '0', '-i', list_txt,
+        '-r', str(fps), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', tmp_path
+    ]
+    try:
+        subprocess.run(
+            concat_cmd,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+    except subprocess.CalledProcessError as e:
+        logger.error(f"FFmpeg concat failed: {e.stderr}")
+        # fallback to image2 glob input
+        pattern = os.path.join(frame_dir, '*.jpg')
+        glob_cmd = [
+            'ffmpeg', '-y', '-framerate', str(fps),
+            '-pattern_type', 'glob', '-i', pattern,
+            '-c:v', 'libx264', '-pix_fmt', 'yuv420p', tmp_path
+        ]
+        try:
+            subprocess.run(
+                glob_cmd,
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+        except subprocess.CalledProcessError as e2:
+            logger.error(f"FFmpeg glob failed: {e2.stderr}")
+            os.remove(tmp_path)
+            os.remove(list_txt)
+            raise Http404("Failed to generate timelapse video.")
+    finally:
+        # remove the list file
+        if os.path.exists(list_txt):
+            os.remove(list_txt)
+
+    # 5. Stream file
+    response = FileResponse(
+        open(tmp_path, 'rb'),
+        as_attachment=True,
+        filename='timelapse.mp4'
+    )
+    response['X-Accel-Buffering'] = 'no'
+    return response
+
+
+
+# Shared helper
+def _build_zip_response(filenames, base_dir, subdir, archive_name):
+    # Create a temp zip file
+    tmp = tempfile.NamedTemporaryFile(suffix='.zip', delete=False)
+    tmp_path = tmp.name
+    tmp.close()
+
+    # Write the selected files into the zip under subdir/
+    with zipfile.ZipFile(tmp_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for fname in filenames:
+            src = os.path.join(base_dir, fname)
+            if os.path.isfile(src):
+                zf.write(src, arcname=os.path.join(subdir, fname))
+
+    # Stream the zip back
+    response = FileResponse(
+        open(tmp_path, 'rb'),
+        as_attachment=True,
+        filename=archive_name
+    )
+    response['X-Accel-Buffering'] = 'no'
+    return response
+
+
+@login_required
+@require_POST
+def download_selected_photos(request):
+    photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
+    filenames = request.POST.getlist('filenames')
+    if not filenames:
+        return HttpResponseBadRequest('No photos selected')
+    return _build_zip_response(filenames, photos_dir, 'photos', 'selected_photos.zip')
+
+
+@login_required
+@require_POST
+def download_all_photos(request):
+    photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
+    filenames = [
+        f for f in os.listdir(photos_dir)
+        if f.lower().endswith(('.jpg', '.jpeg', '.png'))
+    ]
+    if not filenames:
+        return HttpResponseBadRequest('No photos available')
+    return _build_zip_response(filenames, photos_dir, 'photos', 'all_photos.zip')
+
+
+@login_required
+@require_POST
+def download_selected_videos(request):
+    vids_dir = os.path.join(settings.MEDIA_ROOT, 'videos')
+    filenames = request.POST.getlist('filenames')
+    if not filenames:
+        return HttpResponseBadRequest('No videos selected')
+    return _build_zip_response(filenames, vids_dir, 'videos', 'selected_videos.zip')
+
+
+@login_required
+@require_POST
+def download_all_videos(request):
+    vids_dir = os.path.join(settings.MEDIA_ROOT, 'videos')
+    filenames = [
+        f for f in os.listdir(vids_dir)
+        if f.lower().endswith('.mp4')
+    ]
+    if not filenames:
+        return HttpResponseBadRequest('No videos available')
+    return _build_zip_response(filenames, vids_dir, 'videos', 'all_videos.zip')
+
+
+@login_required
+@require_POST
+def download_selected_timelapse(request):
+    from .models import AppConfigSettings
+    config, _ = AppConfigSettings.objects.get_or_create(pk=1)
+    folder = config.timelapse_folder or 'timelapse'
+    tl_dir = os.path.join(settings.MEDIA_ROOT, folder)
+
+    filenames = request.POST.getlist('filenames')
+    if not filenames:
+        return HttpResponseBadRequest('No timelapse frames selected')
+    return _build_zip_response(filenames, tl_dir, folder, 'selected_timelapse.zip')
+
+
+@login_required
+@require_POST
+def download_all_timelapse(request):
+    from .models import AppConfigSettings
+    config, _ = AppConfigSettings.objects.get_or_create(pk=1)
+    folder = config.timelapse_folder or 'timelapse'
+    tl_dir = os.path.join(settings.MEDIA_ROOT, folder)
+
+    filenames = [
+        f for f in os.listdir(tl_dir)
+        if f.lower().endswith(('.jpg', '.jpeg', '.png'))
+    ]
+    if not filenames:
+        return HttpResponseBadRequest('No timelapse frames available')
+    return _build_zip_response(filenames, tl_dir, folder, 'all_timelapse.zip')

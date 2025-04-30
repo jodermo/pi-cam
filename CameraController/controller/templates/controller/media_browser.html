@@ -1,49 +1,167 @@
 {% extends "controller/base.html" %}
 {% load static %}
 
+{% block title %}Media Gallery{% endblock %}
+
+
 {% block content %}
 <div class="media-container">
-  <div class="tabs">
-    <div class="tab active" data-target="photos-section">Photos</div>
-    <div class="tab" data-target="videos-section">Videos</div>
-    <div class="tab" data-target="timelapse-section">Timelapse</div>
-  </div>
-  <section id="photos-section" class="tab-content active">
+
+
+  <!-- Photos -->
+  <section id="photos-section" class="tab-content active" role="tabpanel">
     <div class="batch-actions">
       <button id="delete-selected-photos" disabled>Delete Selected</button>
-      <button id="download-selected-photos" disabled>Download Selected</button>
+      <form id="download-selected-photos-form" method="post" action="{% url 'download_selected_photos' %}" style="display:inline">
+        {% csrf_token %}
+        <input type="hidden" name="filenames" id="photos-filenames">
+        <button id="download-selected-photos" disabled>Download Selected</button>
+      </form>
+      <form method="post" action="{% url 'download_all_photos' %}" style="display:inline">
+        {% csrf_token %}
+        <button>Download All</button>
+      </form>
       <button id="delete-all-photos" class="delete-all">Delete All</button>
     </div>
-    <div id="photos" class="gallery">Loading…</div>
+    <div id="photos" class="gallery">
+      {% for photo in photos %}
+      <div class="gallery-item">
+        <input type="checkbox" class="select-photo" data-id="{{ photo.id }}">
+        <img src="{{ photo.url }}" alt="Photo {{ forloop.counter }}">
+      </div>
+      {% empty %}
+      <p class="muted">No photos found.</p>
+      {% endfor %}
+    </div>
   </section>
-  <section id="videos-section" class="tab-content">
+
+  <!-- Videos -->
+  <section id="videos-section" class="tab-content" role="tabpanel" hidden>
     <div class="batch-actions">
       <button id="delete-selected-videos" disabled>Delete Selected</button>
-      <button id="download-selected-videos" disabled>Download Selected</button>
+      <form id="download-selected-videos-form" method="post" action="{% url 'download_selected_videos' %}" style="display:inline">
+        {% csrf_token %}
+        <input type="hidden" name="filenames" id="videos-filenames">
+        <button id="download-selected-videos" disabled>Download Selected</button>
+      </form>
+      <form method="post" action="{% url 'download_all_videos' %}" style="display:inline">
+        {% csrf_token %}
+        <button>Download All</button>
+      </form>
       <button id="reload-videos">Reload</button>
       <button id="delete-all-videos" class="delete-all">Delete All</button>
     </div>
-    <div id="videos" class="gallery">Loading…</div>
+    <div id="videos" class="gallery">
+      {% for video in videos %}
+      <div class="gallery-item">
+        <input type="checkbox" class="select-video" data-id="{{ video.id }}">
+        <video src="{{ video.url }}" controls></video>
+      </div>
+      {% empty %}
+      <p class="muted">No videos found.</p>
+      {% endfor %}
+    </div>
   </section>
-  <section id="timelapse-section" class="tab-content">
+
+  <!-- Timelapse -->
+  <section id="timelapse-section" class="tab-content" role="tabpanel" hidden>
     <div class="batch-actions">
       <button id="delete-selected-timelapse" disabled>Delete Selected</button>
-      <button id="download-selected-timelapse" disabled>Download Selected</button>
+      <form id="download-selected-tl-form" method="post" action="{% url 'download_selected_timelapse' %}" style="display:inline">
+        {% csrf_token %}
+        <input type="hidden" name="filenames" id="tl-filenames">
+        <button id="download-selected-timelapse" disabled>Download Selected</button>
+      </form>
+      <form method="post" action="{% url 'download_all_timelapse' %}" style="display:inline">
+        {% csrf_token %}
+        <button>Download All</button>
+      </form>
       <button id="reload-timelapse">Reload</button>
       <button id="delete-all-timelapse" class="delete-all">Delete All</button>
     </div>
-    <div id="timelapse" class="gallery">Loading…</div>
+    <div id="timelapse" class="gallery">
+      {% for tl in timelapses %}
+      <div class="gallery-item">
+        <input type="checkbox" class="select-tl" data-id="{{ tl.id }}">
+        <img src="{{ tl.thumbnail_url }}" alt="Timelapse {{ forloop.counter }}">
+      </div>
+      {% empty %}
+      <p class="muted">No timelapses found.</p>
+      {% endfor %}
+    </div>
   </section>
+
 </div>
 {% endblock %}
 
+{% block actions %}
+  <!-- Tabs -->
+<div class="card actions-card span-2">
+  <div class="actions-grid tabs" role="tablist">
+    <button class="tab active" role="tab" aria-selected="true" tabindex="0" data-target="photos-section">Photos</button>
+    <button class="tab" role="tab" aria-selected="false" tabindex="-1" data-target="videos-section">Videos</button>
+    <button class="tab" role="tab" aria-selected="false" tabindex="-1" data-target="timelapse-section">Timelapse</button>
+  </div>
+</div>
+{% endblock %}
+
+
+
+
 {% block scripts %}
 <script>
-  // simplified tab logic
-  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
-    document.querySelectorAll('.tab, .tab-content').forEach(e=>e.classList.remove('active'));
-    t.classList.add('active'); document.getElementById(t.dataset.target).classList.add('active');
+;(function(){
+  // Tab logic
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => activateTab(tab));
+    tab.addEventListener('keydown', e => {
+      if (e.key==='ArrowRight' || e.key==='ArrowLeft') {
+        let i = [...tabs].indexOf(tab);
+        i = (i + (e.key==='ArrowRight'?1:-1) + tabs.length) % tabs.length;
+        activateTab(tabs[i]);
+        tabs[i].focus();
+      }
+    });
   });
-  // reuse loadGallery script from base
+
+  function activateTab(activeTab) {
+    tabs.forEach(tab => {
+      const panel = document.getElementById(tab.dataset.target);
+      const isActive = (tab === activeTab);
+      tab.classList.toggle('active', isActive);
+      tab.setAttribute('aria-selected', isActive);
+      tab.setAttribute('tabindex', isActive? '0':'-1');
+      if (isActive) {
+        panel.classList.add('active');
+        panel.removeAttribute('hidden');
+      } else {
+        panel.classList.remove('active');
+        panel.setAttribute('hidden','');
+      }
+    });
+  }
+
+  // Batch download helper
+  function bindBatch(section, checkboxSel, inputId, buttonId) {
+    const sectionEl = document.querySelector(section);
+    const checkboxes = sectionEl.querySelectorAll(checkboxSel);
+    const inputEl = document.getElementById(inputId);
+    const buttonEl = document.getElementById(buttonId);
+
+    function update() {
+      const ids = [...checkboxes]
+        .filter(cb => cb.checked)
+        .map(cb => cb.dataset.id);
+      inputEl.value = ids;
+      buttonEl.disabled = ids.length === 0;
+    }
+    checkboxes.forEach(cb => cb.addEventListener('change', update));
+  }
+
+  bindBatch('#photos-section',    '.select-photo', 'photos-filenames',    'download-selected-photos');
+  bindBatch('#videos-section',    '.select-video', 'videos-filenames',    'download-selected-videos');
+  bindBatch('#timelapse-section', '.select-tl',    'tl-filenames',        'download-selected-timelapse');
+})();
 </script>
 {% endblock %}

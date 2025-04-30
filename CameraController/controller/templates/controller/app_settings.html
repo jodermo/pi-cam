@@ -4,7 +4,7 @@
 {% block title %}Application Settings{% endblock %}
 
 {% block content %}
-<form method="post">
+<form method="post" class="app-settings-form">
   {% csrf_token %}
   {% for field in form %}
     <div class="form-group">
@@ -18,6 +18,13 @@
       {% endfor %}
     </div>
   {% endfor %}
-  <button type="submit">Save Settings</button>
 </form>
+{% endblock %}
+
+{% block actions %}
+<div class="card actions-card span-2">
+  <div class="actions-grid ">
+    <button type="submit">Save Settings</button>
+  </div>
+</div>
 {% endblock %}

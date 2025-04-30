@@ -8,27 +8,29 @@
   <link rel="stylesheet" href="{% static 'controller/styles.css' %}" />
 </head>
 <body>
-  <main class="login-container">
-    <div class="card form-panel login-card">
-      <h1 class="card-title">Log In</h1>
-      {% if error %}
-        <div class="error">{{ error }}</div>
-      {% endif %}
-      <form method="post" action="{% url 'login' %}" class="form-grid">
-        {% csrf_token %}
-        <div>
-          <label for="id_username">Username</label>
-          <input id="id_username" type="text" name="username" class="input-field" required autofocus />
-        </div>
-        <div>
-          <label for="id_password">Password</label>
-          <input id="id_password" type="password" name="password" class="input-field" required />
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn-action">Log In</button>
-        </div>
-      </form>
-    </div>
-  </main>
+  <div class="app-wrapper">
+    <main class="login-container">
+      <div class="card form-panel login-card">
+        <h1 class="card-title">Pi-Cam Controller</h1>
+        {% if error %}
+          <div class="error">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="{% url 'login' %}" class="login-form">
+          {% csrf_token %}
+          <div>
+            <label for="id_username">Username</label>
+            <input id="id_username" type="text" name="username" class="input-field" required autofocus />
+          </div>
+          <div>
+            <label for="id_password">Password</label>
+            <input id="id_password" type="password" name="password" class="input-field" required />
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-action">Log In</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
 </body>
 </html>

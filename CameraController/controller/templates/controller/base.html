@@ -16,6 +16,7 @@
         <a href="{% url 'timelapse_gallery' %}" class="{% if request.resolver_match.url_name == 'timelapse_gallery' %}active{% endif %}">Timelapse</a>
         <a href="{% url 'media_browser' %}" class="{% if request.resolver_match.url_name == 'media_browser' %}active{% endif %}">Media</a>
         <a href="{% url 'app_settings' %}" class="{% if request.resolver_match.url_name == 'app_settings' %}active{% endif %}">Settings</a>
+        <div class="spacer"></div>
         <a href="{% url 'logout' %}">Logout</a>
       </nav>
     </footer>

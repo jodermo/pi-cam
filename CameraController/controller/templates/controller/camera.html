@@ -1,0 +1,169 @@
+{% extends "controller/base.html" %}
+
+{% block title %}Dashboard - USB Camera Controller{% endblock %}
+{% block header %}
+<div class="header-bar">
+  <h1>USB Camera Controller</h1>
+  <div class="status-indicator" id="camera-status"></div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+
+  <!-- Live Stream Card -->
+  <div class="card stream-card">
+    <div class="stream-wrapper">
+      <img class="stream" src="{{ stream_url }}" alt="Live camera stream" />
+    </div>
+  </div>
+
+<!-- Modal Overlay for Image Settings -->
+<div id="settings-modal" class="modal" aria-hidden="true">
+  <div class="modal-wrapper">
+    <div class="modal-header">
+      <button class="modal-close" id="close-settings">&times;</button>
+      <h2>Image Settings</h2>
+    </div>
+    <div class="modal-content">
+      <div class="settings-grid">
+        {% for setting in settings_fields %}
+          <div class="setting-row">
+            <div class="form-group">
+              <label for="id_{{ setting.name }}">{{ setting.name|capfirst }}</label>
+
+            </div>
+            <div class="form-group">
+              <input id="id_{{ setting.name }}" type="number" min="0" max="255" value="{{ setting.value }}" onchange="syncSlider('{{ setting.name }}', this.value)" />
+              <button class="btn-small" onclick="submitSetting('{{ setting.name }}')">Set</button>
+            </div>
+            <div class="form-group">
+              <input id="slider_{{ setting.name }}" type="range" min="0" max="255" value="{{ setting.value }}" onchange="syncInput('{{ setting.name }}', this.value)" />
+              </div>
+          </div>
+        {% endfor %}
+        <div class="setting-row checkbox-row">
+          <label for="id_auto_exposure">Auto Exposure</label>
+          <form method="post" action="{% url 'set_setting' 'auto_exposure' %}">
+            {% csrf_token %}
+            <input id="id_auto_exposure" type="checkbox" name="value" value="1" {% if db_settings.auto_exposure %}checked{% endif %} onchange="this.form.submit()" />
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop"></div>
+</div>
+
+<div id="camera-error" class="camera-error" style="display:none;"></div>
+<div id="health-check-error" class="camera-error" style="display:none;"></div>
+<div id="camera-recovered" class="camera-error recovered" style="display:none;">
+  Camera recovered
+</div>
+{% endblock %}
+{% block actions %}
+  <!-- Actions Card -->
+  <div class="card actions-card span-2">
+    <div class="camera-source">
+      {% if camera_list %}
+        <form id="camera-form" class="camera-select" method="post" action="{% url 'switch_camera' idx=0 %}">
+          {% csrf_token %}
+          <select id="camera-select" name="idx" onchange="updateCameraForm(this.value);">
+            {% for src in camera_list %}
+              <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>{{ src }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      {% else %}
+        <p class="muted">No cameras available.</p>
+      {% endif %}
+    </div>
+    <div class="actions-grid">
+      <button class="btn-action" onclick="postAction('{% url 'restart' %}')">
+        <span class="icon">&#x21bb;</span>
+        Restart
+      </button>
+      <button class="btn-action" onclick="postAction('{% url 'capture_photo' %}', true)">
+        <span class="icon">&#x1f4f7;</span>
+        Snapshot
+      </button>
+      <button class="btn-action" onclick="postAction('{% url 'start_recording' %}')">
+        <span class="icon">&#x23fa;</span>
+        Record
+      </button>
+      <button class="btn-action" onclick="postAction('{% url 'stop_recording' %}')">
+        <span class="icon">&#x23f9;</span>
+        Stop
+      </button>
+      <button class="btn-action" id="open-settings">
+        <span class="icon">&#9881;</span>
+        Image Settings
+      </button>
+    </div>
+
+    <div class="status-bar">
+      <div id="recording-status"></div>
+      <div id="last-video-block"></div>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}
+{% block scripts %}
+<script>
+  // Toggle Settings Modal
+  const modal = document.getElementById('settings-modal');
+  document.getElementById('open-settings').addEventListener('click', () => {
+    modal.setAttribute('aria-hidden','false');
+  });
+  document.getElementById('close-settings').addEventListener('click', () => {
+    modal.setAttribute('aria-hidden','true');
+  });
+  modal.querySelector('.modal-backdrop').addEventListener('click', () => {
+    modal.setAttribute('aria-hidden','true');
+  });
+
+  // Camera switch helper
+  function updateCameraForm(idx) {
+    const form = document.getElementById('camera-form');
+    form.action = form.action.replace(/switch\/\d+/, 'switch/' + idx);
+    form.submit();
+  }
+
+  // Sync number & slider
+  function syncSlider(name, val) { document.getElementById('slider_'+name).value = val; }
+  function syncInput(name, val)  { document.getElementById('id_'+name).value = val; }
+
+  // Submit single setting
+  function submitSetting(name) {
+    const val = document.getElementById('id_'+name).value;
+    fetch(`/set/${name}/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':'application/x-www-form-urlencoded',
+        'X-CSRFToken':'{{ csrf_token }}'
+      },
+      body: `value=${val}`
+    });
+  }
+
+  // Action buttons (restart, snapshot, etc.)
+  function postAction(url, isPhoto=false) {
+    fetch(url,{
+      method:'POST',
+      headers:{ 'X-CSRFToken':'{{ csrf_token }}' }
+    })
+    .then(res => {
+      if (!res.ok) return res.json().then(e=>Promise.reject(e));
+      return isPhoto ? res.blob() : res.json();
+    })
+    .then(data => {
+      // TODO: update UI based on data
+    })
+    .catch(e => {
+      // TODO: show error
+    });
+  }
+</script>
+{% endblock %}

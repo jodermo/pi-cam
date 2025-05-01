@@ -130,10 +130,25 @@ function postAction(url, isPhoto=false) {
     return isPhoto ? res.blob() : res.json();
   })
   .then(data=>{
-    if(isPhoto) {
-      const url = URL.createObjectURL(data);
-      window.open(url);
-    }
+    if (isPhoto) {
+       const url = URL.createObjectURL(data);
+       window.open(url);
+     } else {
+      // toggle record button state
+      const btn = document.getElementById('start-record');
+      if (url.endsWith('{% url "start_recording" %}')) {
+        btn.classList.add('active');
+        document.getElementById('recording-status').innerText = '● Recording…';
+      } else if (url.endsWith('{% url "stop_recording" %}')) {
+        btn.classList.remove('active');
+        document.getElementById('recording-status').innerText = '';
+        // Optionally update the “last video” link
+        if (data.last_video) {
+          document.getElementById('last-video-block').innerHTML =
+            `<a href="${data.last_video}" target="_blank">Last video</a>`;
+        }
+      }
+     }
   })
   .catch(err=>{
     alert(err.detail||err.error||'Action failed');

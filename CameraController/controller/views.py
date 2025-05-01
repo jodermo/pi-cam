@@ -385,10 +385,7 @@ def camera_event(request):
     if request.method!='POST': return HttpResponseBadRequest('POST only')
     try: payload=json.loads(request.body)
     except: return HttpResponseBadRequest('Invalid JSON')
-    # TODO: handle payload
     return JsonResponse({'status':'received'})
-
-
 
 
 @login_required
@@ -425,26 +422,6 @@ def timelapse_gallery(request):
         'form': form
     })
 
-
-@login_required
-def app_settings(request):
-    """View to update global AppConfigSettings parameters."""
-
-    config, _ = AppConfigSettings.objects.get_or_create(pk=1)
-
-    if request.method == 'POST':
-        form = AppSettingsForm(request.POST, instance=config)
-        if form.is_valid():
-            form.save()
-            return redirect('app_settings')
-    else:
-        form = AppSettingsForm(instance=config)
-
-    return render(request, 'controller/app_settings.html', {
-        'form': form,
-    })
-
-
 @login_required
 def media_browser(request):
     base_url = settings.MEDIA_URL.rstrip('/')
@@ -471,7 +448,6 @@ def media_browser(request):
         'videos':    videos,
         'timelapses': timelapse,
     })
-
 
 @login_required
 @csrf_exempt
@@ -544,8 +520,7 @@ def timelapse_api(request):
                 pass
         return JsonResponse({'deleted': count})
 
-    # build correct URL: strip only “/” then join
-    base = settings.MEDIA_URL.rstrip('/')    # e.g. "/media"
+    base = settings.MEDIA_URL.rstrip('/')
     data = [{
         'filename': f,
         'url': f"{base}/{folder}/{f}"
@@ -571,23 +546,6 @@ def delete_photo(request, filename):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required
-@csrf_exempt
-def delete_all_photos(request):
-    """Delete all snapshot files."""
-    if request.method != 'DELETE':
-        return HttpResponseBadRequest('DELETE only')
-    photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
-    count = 0
-    for fn in os.listdir(photos_dir):
-        if fn.lower().endswith(('.jpg','.jpeg','.png')):
-            try:
-                os.remove(os.path.join(photos_dir, fn))
-                count += 1
-            except:
-                pass
-    return JsonResponse({'status':'deleted_all','count': count})
-
 
 @login_required
 @csrf_exempt
@@ -604,23 +562,6 @@ def delete_video(request, filename):
         return JsonResponse({'status': 'deleted', 'filename': filename})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
-@login_required
-@csrf_exempt
-def delete_all_videos(request):
-    """Delete all recordings."""
-    if request.method != 'DELETE':
-        return HttpResponseBadRequest('DELETE only')
-    vids_dir = os.path.join(settings.MEDIA_ROOT, 'videos')
-    count = 0
-    for fn in os.listdir(vids_dir):
-        if fn.lower().endswith('.mp4'):
-            try:
-                os.remove(os.path.join(vids_dir, fn))
-                count += 1
-            except:
-                pass
-    return JsonResponse({'status':'deleted_all','count': count})
 
 
 @login_required
@@ -640,25 +581,6 @@ def delete_timelapse(request, filename):
         return JsonResponse({'status': 'deleted', 'filename': filename})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
-@login_required
-@csrf_exempt
-def delete_all_timelapse(request):
-    """Delete all timelapse frames."""
-    if request.method != 'DELETE':
-        return HttpResponseBadRequest('DELETE only')
-    config, _ = AppConfigSettings.objects.get_or_create(pk=1)
-    folder = config.timelapse_folder or 'timelapse'
-    tl_dir = os.path.join(settings.MEDIA_ROOT, folder)
-    count = 0
-    for fn in os.listdir(tl_dir):
-        if fn.lower().endswith(('.jpg','.jpeg','.png')):
-            try:
-                os.remove(os.path.join(tl_dir, fn))
-                count += 1
-            except:
-                pass
-    return JsonResponse({'status':'deleted_all','count': count})
 
 
 @login_required

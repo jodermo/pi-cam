@@ -23,35 +23,27 @@ urlpatterns = [
     # Public health endpoint
     path('health/', views.health, name='health'),
 
-    # Protected camera events webhook
-    path('camera-event/', views.camera_event, name='camera_event'),
-    path('api/snapshot/', views.capture_photo, name='api_snapshot'),
-
     # Photos
     path('api/photos/', views.photos_api, name='api_photo_list'),
     path('api/photos/<str:filename>/', views.delete_photo, name='api_delete_photo'),
-    path('api/photos/delete-all/', views.delete_all_photos, name='api_delete_all_photos'),
     path('download/photos/selected/', views.download_selected_photos, name='download_selected_photos'),
     path('download/photos/all/',      views.download_all_photos,      name='download_all_photos'),
 
     # Videos
     path('api/videos/', views.video_api, name='api_video_list'),
     path('api/videos/<str:filename>/', views.delete_video, name='api_delete_video'),
-    path('api/videos/delete-all/', views.delete_all_videos, name='api_delete_all_videos'),
     path('download/videos/selected/', views.download_selected_videos, name='download_selected_videos'),
     path('download/videos/all/',      views.download_all_videos,      name='download_all_videos'),
-
 
     # Timelapse
     path('api/timelapse/', views.timelapse_api, name='api_timelapse_list'),
     path('api/timelapse/<str:filename>/', views.delete_timelapse, name='api_delete_timelapse'),
-    path('api/timelapse/delete-all/',  views.delete_all_timelapse, name='api_delete_all_timelapse'),
     path('timelapse/download/', views.download_timelapse, name='download_timelapse'),
     path('download/timelapse/selected/', views.download_selected_timelapse, name='download_selected_timelapse'),
     path('download/timelapse/all/',      views.download_all_timelapse,      name='download_all_timelapse'),
-
     path('timelapse-gallery/', views.timelapse_gallery, name='timelapse_gallery'),
+
+    # Media Brwoser
     path('media-browser/', views.media_browser, name='media_browser'),
-    path('app-settings/', views.app_settings, name='app_settings'),
 
 ]

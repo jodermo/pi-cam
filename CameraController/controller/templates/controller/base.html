@@ -17,20 +17,20 @@
     <footer class="app-header">
       <nav class="app-nav">
         <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">
-          <span class="icon">🎥</span>
+          <i class="fas fa-camera" aria-hidden="true"></i>
         </a>
         <a href="{% url 'timelapse_gallery' %}" class="{% if request.resolver_match.url_name == 'timelapse_gallery' %}active{% endif %}">
-          <span class="icon">🕑</span>
+          <i class="fas fa-stopwatch"></i>
         </a>
         <a href="{% url 'media_browser' %}" class="{% if request.resolver_match.url_name == 'media_browser' %}active{% endif %}">
-          <span class="icon">📁</span>
+          <i class="fas fa-photo-video"></i>
         </a>
         <a href="{% url 'app_settings' %}" class="{% if request.resolver_match.url_name == 'app_settings' %}active{% endif %}">
-          <span class="icon">⚙</span>
+          <i class="fas fa-cog"></i>
         </a>
         <div class="spacer"></div>
         <a href="{% url 'logout' %}">
-          <span class="icon">🚫</span>
+          <i class="fas fa-sign-out-alt"></i>
         </a>
       </nav>
     </footer>

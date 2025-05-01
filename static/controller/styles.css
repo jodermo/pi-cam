@@ -108,7 +108,13 @@ i.fas{
   cursor: pointer;
   transition: background 0.2s;
 }
+#record-form{
+  display: flex;
 
+}
+#record-form button{
+  flex: 1;
+}
 .navigation-grid  > *{
   flex: 1;
 }

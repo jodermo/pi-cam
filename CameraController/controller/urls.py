@@ -23,8 +23,8 @@ urlpatterns = [
     # Audio endpoints
     path('api/audio-sources/',      views.audio_sources,    name='api_audio_sources'),
     path('api/switch-audio/<int:idx>/', views.switch_audio,  name='api_switch_audio'),
-    path('stream/audio/',           views.stream_audio,     name='stream_audio'),
-
+    path('api/stream/audio/',      views.stream_audio,  name='stream_audio'),
+    
     # Public health endpoint
     path('health/', views.health, name='health'),
 

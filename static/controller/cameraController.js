@@ -311,21 +311,23 @@ class CameraController {
         const sel = document.getElementById('audio-select');
         const btn = document.getElementById('audio-switch-btn');
         const aud = document.getElementById('live-audio');
-      
-        btn.addEventListener('click', async () => {
-          const idx = sel.value;
-          const res = await fetch(`/api/switch-audio/${idx}/`, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'X-CSRFToken': this.csrfToken }
-          });
-          if (res.ok) {
-            // reload the audio element to pick up the new device
-            aud.load();
-          } else {
-            alert('Failed to switch audio');
-          }
-        });
+        if(btn && sel && aud){
+            btn.addEventListener('click', async () => {
+                const idx = sel.value;
+                const res = await fetch(`/api/switch-audio/${idx}/`, {
+                  method: 'POST',
+                  credentials: 'same-origin',
+                  headers: { 'X-CSRFToken': this.csrfToken }
+                });
+                if (res.ok) {
+                  // reload the audio element to pick up the new device
+                  aud.load();
+                } else {
+                  alert('Failed to switch audio');
+                }
+              });
+        }
+
       }
   }
 

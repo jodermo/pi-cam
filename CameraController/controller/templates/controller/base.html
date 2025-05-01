@@ -30,7 +30,8 @@
         videosList:    '{% url "api_video_list" %}',
         timelapseList: '{% url "api_timelapse_list" %}'
       },
-      settings: settings
+      settings: settings,
+      recording: {{ is_recording|yesno:"true,false" }}
     };
   </script>
   

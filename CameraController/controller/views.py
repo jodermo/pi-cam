@@ -28,6 +28,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from django.conf import settings
 from django import forms
 
+
 import cv2
 from .models import CameraSettings, AppConfigSettings
 from .stream_recorder import StreamRecorder
@@ -51,6 +52,7 @@ SETTINGS_FIELDS = [
 _recording_thread     = None
 _recording_path       = None
 _recording_start_time = None
+_av_recorder = None
 
 class StreamRecorder(threading.Thread):
     """Background thread to record MJPEG stream to MP4 file."""
@@ -80,6 +82,34 @@ class StreamRecorder(threading.Thread):
         cap.release()
         logger.info(f"Saved recording to {self.output_path}")
 
+
+class AVRecorder(threading.Thread):
+    def __init__(self, video_url, audio_url, output_path, fps=20.0):
+        super().__init__()
+        self.video_url   = video_url
+        self.audio_url   = audio_url
+        self.output_path = output_path
+        self.fps         = fps
+        self.proc        = None
+
+    def run(self):
+        cmd = [
+          "ffmpeg", "-y",
+          "-i", self.video_url,
+          "-i", self.audio_url,
+          "-c:v", "libx264", "-preset", "ultrafast", "-r", str(self.fps),
+          "-c:a", "aac",
+          "-pix_fmt", "yuv420p",
+          self.output_path
+        ]
+        logger.info("Starting AV record: " + " ".join(cmd))
+        self.proc = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+        self.proc.wait()
+        logger.info(f"Finished AV record: {self.output_path}")
+
+    def stop(self):
+        if self.proc and self.proc.poll() is None:
+            self.proc.terminate()
 
 
 class AppSettingsForm(forms.ModelForm):
@@ -157,7 +187,7 @@ def camera(request):
     except Exception:
         audio_inputs     = []
         active_audio_idx = 0
-        
+
     raw = os.getenv('CAMERA_LOCATIONS', '/dev/video0')
     camera_list = [loc.strip() for loc in raw.split(',') if loc.strip()]
 
@@ -274,48 +304,79 @@ def capture_photo(request):
 
 
 @login_required
+@require_POST
 def start_recording(request):
-    global _recording_thread, _recording_path, _recording_start_time
-    if request.method != 'POST':
-        return HttpResponseBadRequest('POST only')
-    if _recording_thread and _recording_thread.is_alive():
-        return JsonResponse({'error': 'Already recording'}, status=400)
+    global _av_recorder
 
+    # if an old recorder exists, only refuse if its FFmpeg is truly still running
+    if _av_recorder:
+        proc = getattr(_av_recorder, 'proc', None)
+        if _av_recorder.is_alive() and proc and proc.poll() is None:
+            return JsonResponse({'error': 'Already recording'}, status=400)
+        # otherwise clean up stale
+        _av_recorder = None
+
+    # fetch available audio‐inputs from FastAPI
+    try:
+        resp = requests.get(f"{API_BASE}/audio-sources", timeout=2)
+        resp.raise_for_status()
+        sources     = resp.json().get('sources', [])
+        default_idx = resp.json().get('active_idx', 0)
+    except Exception:
+        sources, default_idx = [], 0
+
+    # pick index from form (or fall back)
+    try:
+        audio_idx = int(request.POST.get('audio_idx', default_idx))
+    except ValueError:
+        return JsonResponse({'error': 'Invalid audio_idx'}, status=400)
+    if not (0 <= audio_idx < len(sources)):
+        return JsonResponse({'error': 'Audio index out of range'}, status=400)
+
+    # build the HTTP URL for the live Ogg/Opus stream
+    audio_url = f"{API_BASE}/stream/audio"
+
+    # prepare output
+    fname      = datetime.utcnow().strftime('av_%Y%m%d_%H%M%S.mp4')
     videos_dir = os.path.join(settings.MEDIA_ROOT, 'videos')
     os.makedirs(videos_dir, exist_ok=True)
+    outpath    = os.path.join(videos_dir, fname)
 
-    fname = datetime.utcnow().strftime('stream_%Y%m%d_%H%M%S.mp4')
-    _recording_path = os.path.join(videos_dir, fname)
+    # start recording both streams
+    _av_recorder = AVRecorder(
+        video_url=INTERNAL_STREAM_URL,
+        audio_url=audio_url,
+        output_path=outpath
+    )
+    _av_recorder.start()
 
-    _recording_thread = StreamRecorder(INTERNAL_STREAM_URL, _recording_path)
-    _recording_thread.start()
-    _recording_start_time = datetime.utcnow()
-
-    # return server UTC timestamp (ms) and status
-    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
-    return JsonResponse({'status': 'started', 'start_ts': now_ms})
-
-
+    return JsonResponse({'status': 'started'})
 
 
 @login_required
+@require_POST
 def stop_recording(request):
-    global _recording_thread, _recording_path, _recording_start_time
-    if request.method != 'POST':
-        return HttpResponseBadRequest('POST only')
-    if not _recording_thread or not _recording_thread.is_alive():
+    global _av_recorder
+
+    if not _av_recorder:
         return JsonResponse({'error': 'Not recording'}, status=400)
 
-    _recording_thread.stop_event.set()
-    _recording_thread.join()
-    _recording_start_time = None
+    # capture final path
+    outpath = _av_recorder.output_path
 
-    rel = os.path.relpath(_recording_path, getattr(settings, 'MEDIA_ROOT', ''))
-    rel = rel.replace('\\', '/')
-    last_video_url = settings.MEDIA_URL.rstrip('/') + '/' + rel
+    # if FFmpeg still running, terminate it cleanly
+    proc = getattr(_av_recorder, 'proc', None)
+    if proc and proc.poll() is None:
+        _av_recorder.stop()
+        _av_recorder.join()
 
-    return JsonResponse({'status': 'stopped', 'last_video': last_video_url})
+    _av_recorder = None
 
+    # compute public URL
+    rel = os.path.relpath(outpath, settings.MEDIA_ROOT).replace('\\', '/')
+    url = settings.MEDIA_URL.rstrip('/') + '/' + rel
+
+    return JsonResponse({'status': 'stopped', 'video': url})
 
 
 @login_required

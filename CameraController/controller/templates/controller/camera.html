@@ -24,11 +24,19 @@
     <div class="status-indicator" id="camera-status"></div>
   </div>
 {% endif %}
-{% if camera_list %}
-<div>
-  <audio id="live-audio" src="{% url 'stream_audio' %}" autoplay></audio>
+{% if audio_inputs %}
+<div class="audio-controls card">
+  <audio
+    id="live-audio"
+    controls
+    autoplay
+    preload="none"
+    src="{% url 'stream_audio' %}"
+    type="audio/ogg"
+  ></audio>
+
   <div class="select-container">
-    <span>Audio Device:</span>
+    <label for="audio-select">Audio Device:</label>
     <select id="audio-select">
       {% for dev in audio_inputs %}
         <option value="{{ forloop.counter0 }}"
@@ -38,7 +46,13 @@
       {% endfor %}
     </select>
   </div>
-  <button id="audio-switch-btn">Switch Audio</button>
+
+  <button class="btn-action" id="audio-switch-btn">
+    <i class="fas fa-exchange-alt"></i> Switch Audio
+  </button>
+  <button class="btn-action" id="audio-restart-btn">
+    <i class="fas fa-redo"></i> Restart Audio
+  </button>
 </div>
 {% endif %}
 {% endblock %}
@@ -143,13 +157,18 @@
       >
         <i class="fas fa-camera"></i>
       </button>
-      <button
-        id="start-record"
-        class="btn-action {% if is_recording %}active{% endif %}"
-        onclick="controller.postAction('{% url 'start_recording' %}');"
-      >
-        <i class="fas fa-dot-circle"></i>
-      </button>
+      <form id="record-form" method="post" action="{% url 'start_recording' %}">
+        {% csrf_token %}
+        <input type="hidden" name="audio_idx" id="record-audio-idx" value="{{ active_audio_idx }}">
+        <button
+          type="button"
+          id="start-record"
+          class="btn-action {% if is_recording %}active{% endif %}"
+        >
+          <i class="fas fa-dot-circle"></i>
+        </button>
+      </form>
+
       <button class="btn-action" onclick="controller.postAction('{% url 'stop_recording' %}');">
         <i class="fas fa-stop-circle"></i>
       </button>
@@ -159,4 +178,55 @@
     </div>
 
   </div>
+{% endblock %}
+
+
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const audioEl = document.getElementById('live-audio');
+    const select  = document.getElementById('audio-select');
+    const switchBtn  = document.getElementById('audio-switch-btn');
+    const restartBtn = document.getElementById('audio-restart-btn');
+    const csrftoken  = '{{ csrf_token }}';
+    const base      = window.location.origin;
+    
+    function reloadStream() {
+      // bust cache so audio tag reconnects
+      audioEl.src = `{% url 'stream_audio' %}?_=${Date.now()}`;
+      audioEl.load();
+      audioEl.play().catch(() => {});
+    }
+
+    switchBtn?.addEventListener('click', async () => {
+      const idx = select.value;
+      try {
+        const res = await fetch(`${base}/api/switch-audio/${idx}`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrftoken }
+        });
+        if (!res.ok) throw await res.json();
+        reloadStream();
+      } catch (e) {
+        alert('Failed to switch audio: ' + (e.error||e.detail||e));
+      }
+    });
+
+    restartBtn?.addEventListener('click', async () => {
+      // re-switch to same index to force ffmpeg restart
+      const idx = select.value;
+      try {
+        const res = await fetch(`${base}/api/switch-audio/${idx}`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrftoken }
+        });
+        if (!res.ok) throw await res.json();
+        reloadStream();
+      } catch (e) {
+        alert('Failed to restart audio: ' + (e.error||e.detail||e));
+      }
+    });
+  });
+</script>
 {% endblock %}

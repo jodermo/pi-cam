@@ -11,6 +11,10 @@ server {
     listen 80;
     server_name ${DOMAIN};
     return 301 https://$host$request_uri;
+    types {
+      video/mp4  mp4;
+    }
+    default_type  application/octet-stream;
 }
 
 # HTTPS server block
@@ -71,6 +75,12 @@ server {
         add_header      Accept-Ranges bytes;
         expires         1h;
         access_log      off;
+
+
+        types {
+            video/mp4  mp4;
+        }
+        default_type  application/octet-stream;
     }
 
 

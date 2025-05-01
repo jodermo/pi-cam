@@ -11,23 +11,15 @@
 <body>
   <div class="app-wrapper">
     <footer class="app-header">
-      <nav class="tabs app-nav" role="tablist">
-        <button class="navigation-button tab {% if request.resolver_match.url_name == 'index' %}active{% endif %}" role="tab" aria-selected="{% if request.resolver_match.url_name == 'index' %}true{% else %}false{% endif %}" tabindex="0" data-target="index">
-          <img src="{% static 'icons/camera.svg' %}" alt="Camera" class="nav-icon" />
-        </button>
-        <button class="navigation-button tab {% if request.resolver_match.url_name == 'timelapse_gallery' %}active{% endif %}" role="tab" aria-selected="{% if request.resolver_match.url_name == 'timelapse_gallery' %}true{% else %}false{% endif %}" tabindex="-1" data-target="timelapse_gallery">
-          <img src="{% static 'icons/timelapse.svg' %}" alt="Timelapse" class="nav-icon" />
-        </button>
-        <button class="navigation-button tab {% if request.resolver_match.url_name == 'media_browser' %}active{% endif %}" role="tab" aria-selected="{% if request.resolver_match.url_name == 'media_browser' %}true{% else %}false{% endif %}" tabindex="-1" data-target="media_browser">
-          <img src="{% static 'icons/media.svg' %}" alt="Media" class="nav-icon" />
-        </button>
-        <button class="navigation-button tab {% if request.resolver_match.url_name == 'app_settings' %}active{% endif %}" role="tab" aria-selected="{% if request.resolver_match.url_name == 'app_settings' %}true{% else %}false{% endif %}" tabindex="-1" data-target="app_settings">
-          <img src="{% static 'icons/settings.svg' %}" alt="Settings" class="nav-icon" />
-        </button>
-        <div class="spacer"></div>
-        <a href="{% url 'logout' %}" class="logout-button">
-          <img src="{% static 'icons/logout.svg' %}" alt="Logout" class="nav-icon" />
+      <nav class="app-nav">
+        <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+          <div class="icon"></div>
         </a>
+        <a href="{% url 'timelapse_gallery' %}" class="{% if request.resolver_match.url_name == 'timelapse_gallery' %}active{% endif %}">Timelapse</a>
+        <a href="{% url 'media_browser' %}" class="{% if request.resolver_match.url_name == 'media_browser' %}active{% endif %}">Media</a>
+        <a href="{% url 'app_settings' %}" class="{% if request.resolver_match.url_name == 'app_settings' %}active{% endif %}">Settings</a>
+        <div class="spacer"></div>
+        <a href="{% url 'logout' %}">Logout</a>
       </nav>
     </footer>
     {% block actions %}{% endblock %}

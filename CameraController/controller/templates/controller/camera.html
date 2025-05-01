@@ -80,9 +80,10 @@
   Camera recovered
 </div>
 {% endblock %}
-
 {% block navigation %}
+
   <div class="card navigation-card span-2">
+
     <div class="navigation-grid">
       <button class="btn-action" onclick="postAction('{% url 'restart' %}')">
         <span class="icon">&#x21bb;</span>
@@ -90,49 +91,26 @@
       <button class="btn-action" onclick="postAction('{% url 'capture_photo' %}', true)">
         <span class="icon">&#x1f4f7;</span>
       </button>
-
-      {# START RECORD #}
-      <button
-        id="start-recording-btn"
-        class="btn-action {% if is_recording %}active{% endif %}"
-        onclick="postAction('{% url 'start_recording' %}')"
-        {% if is_recording %}disabled{% endif %}
-      >
+      <button class="btn-action {% if is_recording %}active{% endif %}" onclick="postAction('{% url 'start_recording' %}')">
         <span class="icon">&#x23fa;</span>
       </button>
-
-      {# STOP RECORD #}
-      <button
-        id="stop-recording-btn"
-        class="btn-action {% if not is_recording %}disabled{% endif %}"
-        onclick="postAction('{% url 'stop_recording' %}')"
-        {% if not is_recording %}disabled{% endif %}
-      >
+      <button class="btn-action" onclick="postAction('{% url 'stop_recording' %}')">
         <span class="icon">&#x23f9;</span>
       </button>
-
       <button class="btn-action" id="open-settings">
         <span class="icon">&#9881;</span>
       </button>
     </div>
 
     <div class="status-bar">
-      <div id="recording-status">
-        {% if is_recording %}
-          <em>Recording…</em>
-        {% endif %}
-      </div>
-      <div id="last-video-block">
-        {% if last_video_url and not is_recording %}
-          <a href="{{ last_video_url }}">Download last clip</a>
-        {% endif %}
-      </div>
+      <div id="recording-status"></div>
+      <div id="last-video-block"></div>
     </div>
   </div>
+</div>
+
+
 {% endblock %}
-
-
-
 {% block scripts %}
 <script>
   // Toggle Settings Modal

@@ -131,14 +131,14 @@ nav a.active {
   font-weight: 500;
 }
 
-.actions-grid{
+.navigation-grid{
   display: flex;
   flex-wrap: wrap;
   column-gap: var(--spacing-xs);
   row-gap: var(--spacing-xs);
 }
 
-.actions-grid > *{
+.navigation-grid > *{
   flex: 1;
 }
 
@@ -414,7 +414,7 @@ input[type="range"]{
   cursor: pointer;
 }
 
-.actions-grid > button{
+.navigation-grid > button{
   text-align: center;
 }
 

@@ -1,27 +1,88 @@
 {% extends "controller/base.html" %}
 {% load static %}
 
+{% block extrahead %}
+<style>
+  .media-container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); grid-gap: 1rem; }
+  .gallery-item { background: #fff; border: 1px solid #ddd; border-radius: 0.5rem; padding: 0.5rem; display: flex; flex-direction: column; }
+  .gallery-item img,
+  .gallery-item video { width: 100%; height: auto; border-radius: 0.25rem; }
+  .timestamp { margin-top: 0.5rem; font-size: 0.85rem; color: #555; text-align: right; }
+  .actions-card, .navigation-card { background: #f7f7f7; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 1rem; }
+  .batch-actions button,
+  .batch-actions form button { margin-right: 0.5rem; }
+  .tabs { display: flex; gap: 0.5rem; }
+  .navigation-button { flex: 1; padding: 0.5rem; background: #e0e0e0; border: none; border-radius: 0.25rem; cursor: pointer; }
+  .navigation-button.active { background: #007bff; color: #fff; }
+</style>
+{% endblock %}
+
 {% block title %}Media Gallery{% endblock %}
 
+{% block actions %}
+<section id="photos-section-actions" class="actions-card tab-content active" role="tabpanel">
+  <div class="batch-actions">
+    <button id="delete-selected-photos" disabled>Delete Selected</button>
+    <form id="download-selected-photos-form" method="post" action="{% url 'download_selected_photos' %}" style="display:inline-block">
+      {% csrf_token %}
+      <input type="hidden" name="filenames" id="photos-filenames">
+      <button id="download-selected-photos" disabled>Download Selected</button>
+    </form>
+    <form method="post" action="{% url 'download_all_photos' %}" style="display:inline-block">
+      {% csrf_token %}
+      <button>Download All</button>
+    </form>
+    <button id="delete-all-photos" class="delete-all">Delete All</button>
+  </div>
+</section>
+<section id="videos-section-actions" class="actions-card tab-content" role="tabpanel" hidden>
+  <div class="batch-actions">
+    <button id="delete-selected-videos" disabled>Delete Selected</button>
+    <form id="download-selected-videos-form" method="post" action="{% url 'download_selected_videos' %}" style="display:inline-block">
+      {% csrf_token %}
+      <input type="hidden" name="filenames" id="videos-filenames">
+      <button id="download-selected-videos" disabled>Download Selected</button>
+    </form>
+    <form method="post" action="{% url 'download_all_videos' %}" style="display:inline-block">
+      {% csrf_token %}
+      <button>Download All</button>
+    </form>
+    <button id="reload-videos">Reload</button>
+    <button id="delete-all-videos" class="delete-all">Delete All</button>
+  </div>
+</section>
+<section id="timelapse-section-actions" class="actions-card tab-content" role="tabpanel" hidden>
+  <div class="batch-actions">
+    <button id="delete-selected-timelapse" disabled>Delete Selected</button>
+    <form id="download-selected-tl-form" method="post" action="{% url 'download_selected_timelapse' %}" style="display:inline-block">
+      {% csrf_token %}
+      <input type="hidden" name="filenames" id="tl-filenames">
+      <button id="download-selected-timelapse" disabled>Download Selected</button>
+    </form>
+    <form method="post" action="{% url 'download_all_timelapse' %}" style="display:inline-block">
+      {% csrf_token %}
+      <button>Download All</button>
+    </form>
+    <button id="reload-timelapse">Reload</button>
+    <button id="delete-all-timelapse" class="delete-all">Delete All</button>
+  </div>
+</section>
+{% endblock %}
+
+{% block navigation %}
+<div class="navigation-card span-2">
+  <div class="tabs" role="tablist">
+    <button class="navigation-button tab active" role="tab" aria-selected="true" tabindex="0" data-target="photos-section">Photos</button>
+    <button class="navigation-button tab" role="tab" aria-selected="false" tabindex="-1" data-target="videos-section">Videos</button>
+    <button class="navigation-button tab" role="tab" aria-selected="false" tabindex="-1" data-target="timelapse-section">Timelapse</button>
+  </div>
+</div>
+{% endblock %}
+
 {% block content %}
-
 <div class="media-container">
-
-  <!-- Photos -->
   <section id="photos-section" class="tab-content active" role="tabpanel">
-    <div class="batch-actions">
-      <button id="delete-selected-photos" disabled>Delete Selected</button>
-      <form id="download-selected-photos-form" method="post" action="{% url 'download_selected_photos' %}" style="display:inline">
-        {% csrf_token %}
-        <input type="hidden" name="filenames" id="photos-filenames">
-        <button id="download-selected-photos" disabled>Download Selected</button>
-      </form>
-      <form method="post" action="{% url 'download_all_photos' %}" style="display:inline">
-        {% csrf_token %}
-        <button>Download All</button>
-      </form>
-      <button id="delete-all-photos" class="delete-all">Delete All</button>
-    </div>
     <div id="photos" class="gallery">
       {% for photo in photos %}
       <div class="gallery-item" data-url="{{ photo.url }}">
@@ -35,22 +96,7 @@
     </div>
   </section>
 
-  <!-- Videos -->
   <section id="videos-section" class="tab-content" role="tabpanel" hidden>
-    <div class="batch-actions">
-      <button id="delete-selected-videos" disabled>Delete Selected</button>
-      <form id="download-selected-videos-form" method="post" action="{% url 'download_selected_videos' %}" style="display:inline">
-        {% csrf_token %}
-        <input type="hidden" name="filenames" id="videos-filenames">
-        <button id="download-selected-videos" disabled>Download Selected</button>
-      </form>
-      <form method="post" action="{% url 'download_all_videos' %}" style="display:inline">
-        {% csrf_token %}
-        <button>Download All</button>
-      </form>
-      <button id="reload-videos">Reload</button>
-      <button id="delete-all-videos" class="delete-all">Delete All</button>
-    </div>
     <div id="videos" class="gallery">
       {% for video in videos %}
       <div class="gallery-item" data-url="{{ video.url }}">
@@ -64,22 +110,7 @@
     </div>
   </section>
 
-  <!-- Timelapse -->
   <section id="timelapse-section" class="tab-content" role="tabpanel" hidden>
-    <div class="batch-actions">
-      <button id="delete-selected-timelapse" disabled>Delete Selected</button>
-      <form id="download-selected-tl-form" method="post" action="{% url 'download_selected_timelapse' %}" style="display:inline">
-        {% csrf_token %}
-        <input type="hidden" name="filenames" id="tl-filenames">
-        <button id="download-selected-timelapse" disabled>Download Selected</button>
-      </form>
-      <form method="post" action="{% url 'download_all_timelapse' %}" style="display:inline">
-        {% csrf_token %}
-        <button>Download All</button>
-      </form>
-      <button id="reload-timelapse">Reload</button>
-      <button id="delete-all-timelapse" class="delete-all">Delete All</button>
-    </div>
     <div id="timelapse" class="gallery">
       {% for tl in timelapses %}
       <div class="gallery-item" data-url="{{ tl.url }}">
@@ -92,18 +123,6 @@
       {% endfor %}
     </div>
   </section>
-
-</div>
-{% endblock %}
-
-{% block actions %}
-  <!-- Tabs -->
-<div class="card actions-card span-2">
-  <div class="actions-grid tabs" role="tablist">
-    <button class="tab active" role="tab" aria-selected="true" tabindex="0" data-target="photos-section">Photos</button>
-    <button class="tab" role="tab" aria-selected="false" tabindex="-1" data-target="videos-section">Videos</button>
-    <button class="tab" role="tab" aria-selected="false" tabindex="-1" data-target="timelapse-section">Timelapse</button>
-  </div>
 </div>
 {% endblock %}
 
@@ -127,16 +146,17 @@
   function activateTab(activeTab) {
     tabs.forEach(tab => {
       const panel = document.getElementById(tab.dataset.target);
+      const actions = document.getElementById(tab.dataset.target + '-actions');
       const isActive = (tab === activeTab);
       tab.classList.toggle('active', isActive);
       tab.setAttribute('aria-selected', isActive);
       tab.setAttribute('tabindex', isActive? '0':'-1');
       if (isActive) {
-        panel.classList.add('active');
-        panel.removeAttribute('hidden');
+        panel.classList.add('active'); panel.removeAttribute('hidden');
+        actions.classList.add('active'); actions.removeAttribute('hidden');
       } else {
-        panel.classList.remove('active');
-        panel.setAttribute('hidden','');
+        panel.classList.remove('active'); panel.setAttribute('hidden','');
+        actions.classList.remove('active'); actions.setAttribute('hidden','');
       }
     });
   }
@@ -149,18 +169,16 @@
     const buttonEl = document.getElementById(buttonId);
 
     function update() {
-      const ids = [...checkboxes]
-        .filter(cb => cb.checked)
-        .map(cb => cb.dataset.id);
+      const ids = [...checkboxes].filter(cb => cb.checked).map(cb => cb.dataset.id);
       inputEl.value = ids;
       buttonEl.disabled = ids.length === 0;
     }
     checkboxes.forEach(cb => cb.addEventListener('change', update));
   }
 
-  bindBatch('#photos-section',    '.select-photo', 'photos-filenames',    'download-selected-photos');
-  bindBatch('#videos-section',    '.select-video', 'videos-filenames',    'download-selected-videos');
-  bindBatch('#timelapse-section', '.select-tl',    'tl-filenames',        'download-selected-timelapse');
+  bindBatch('#photos-section', '.select-photo', 'photos-filenames', 'download-selected-photos');
+  bindBatch('#videos-section', '.select-video', 'videos-filenames', 'download-selected-videos');
+  bindBatch('#timelapse-section', '.select-tl', 'tl-filenames', 'download-selected-timelapse');
 
   // Timestamp parsing
   document.addEventListener('DOMContentLoaded', () => {
@@ -169,15 +187,10 @@
       const fname = url.split('/').pop();
       const match = fname.match(/_(\d{8})_(\d{6})/);
       if (match) {
-        const datePart = match[1];
-        const timePart = match[2];
-        const year = parseInt(datePart.slice(0,4), 10);
-        const month = parseInt(datePart.slice(4,6), 10) - 1;
-        const day = parseInt(datePart.slice(6,8), 10);
-        const hour = parseInt(timePart.slice(0,2), 10);
-        const minute = parseInt(timePart.slice(2,4), 10);
-        const second = parseInt(timePart.slice(4,6), 10);
-        const utcDate = new Date(Date.UTC(year, month, day, hour, minute, second));
+        const [_, datePart, timePart] = match;
+        const y = +datePart.slice(0,4), m = +datePart.slice(4,6)-1, d = +datePart.slice(6,8);
+        const H = +timePart.slice(0,2), M = +timePart.slice(2,4), S = +timePart.slice(4,6);
+        const utcDate = new Date(Date.UTC(y,m,d,H,M,S));
         el.querySelector('.timestamp').textContent = utcDate.toLocaleString();
       }
     });

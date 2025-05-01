@@ -20,10 +20,11 @@
         <a href="{% url 'logout' %}">Logout</a>
       </nav>
     </footer>
+    {% block actions %}{% endblock %}
     <main class="content">
       {% block content %}{% endblock %}
     </main>
-    {% block actions %}{% endblock %}
+    {% block navigation %}{% endblock %}
   </div>
   {% block scripts %}{% endblock %}
 </body>

@@ -18,6 +18,14 @@
     </form>
   </div>
   
+
+
+  <div class="header-bar">
+    <h1>USB Camera Controller</h1>
+    <div class="status-indicator" id="camera-status"></div>
+  </div>
+{% endif %}
+
 <audio id="live-audio" src="{% url 'stream_audio' %}" autoplay></audio>
 <select id="audio-select">
   {% for dev in audio_inputs %}
@@ -29,11 +37,6 @@
 </select>
 <button id="audio-switch-btn">Switch Audio</button>
 
-  <div class="header-bar">
-    <h1>USB Camera Controller</h1>
-    <div class="status-indicator" id="camera-status"></div>
-  </div>
-{% endif %}
 {% endblock %}
 
 {% block content %}

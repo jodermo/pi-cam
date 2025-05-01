@@ -38,7 +38,7 @@
 </head>
 <body>
   <div class="app-wrapper">
-    <footer class="app-header">
+    <header class="app-header">
       <nav class="app-nav">
         <a href="{% url 'camera' %}" class="{% if request.resolver_match.url_name == 'camera' %}active{% endif %}">
           <i class="fas fa-camera" aria-hidden="true"></i>
@@ -54,7 +54,7 @@
           <i class="fas fa-sign-out-alt"></i>
         </a>
       </nav>
-    </footer>
+    </header>
     {% block actions %}{% endblock %}
     <main class="content">
       {% block content %}{% endblock %}

@@ -18,7 +18,8 @@ from django.http import (
     HttpResponseBadRequest,
     HttpResponseServerError,
     FileResponse, 
-    Http404
+    Http404,
+    StreamingHttpResponse
 )
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -38,11 +39,13 @@ STREAM_PATH         = f"{API_PREFIX}/stream"
 
 CAMERA_SERVICE_BASE = os.getenv('CAMERA_SERVICE_URL', 'http://pi-cam-camera:8000')
 INTERNAL_STREAM_URL = f"{CAMERA_SERVICE_BASE.rstrip('/')}/api/stream"
+API_BASE = CAMERA_SERVICE_BASE.rstrip('/')
 
 # Properties to expose in UI
 SETTINGS_FIELDS = [
     'brightness', 'contrast', 'saturation', 'hue', 'gain', 'exposure'
 ]
+
 
 # Recording state
 _recording_thread     = None
@@ -787,3 +790,58 @@ def download_all_timelapse(request):
 def serve_video(request, filename):
     path = os.path.join(settings.MEDIA_ROOT, 'videos', filename)
     return FileResponse(open(path, 'rb'), content_type='video/mp4')
+
+
+@login_required
+def audio_sources(request):
+    """
+    Fetch list of available audio inputs from the FastAPI service
+    and return as JSON.
+    """
+    try:
+        resp = requests.get(f"{API_BASE}/audio-sources", timeout=5)
+        resp.raise_for_status()
+        return JsonResponse(resp.json(), safe=False)
+    except requests.RequestException as e:
+        return JsonResponse({'error': str(e)}, status=502)
+
+
+@login_required
+@require_POST
+def switch_audio(request, idx):
+    """
+    Instruct the FastAPI service to switch to AUDIO_INPUTS[idx].
+    """
+    try:
+        resp = requests.post(f"{API_BASE}/switch-audio/{idx}", timeout=5)
+        resp.raise_for_status()
+        return JsonResponse(resp.json())
+    except requests.HTTPError as e:
+        # propagate HTTP error code & message
+        return JsonResponse({'error': str(e)}, status=resp.status_code)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=502)
+
+
+@login_required
+def stream_audio(request):
+    """
+    Proxy the Ogg/Opus audio stream from FastAPI to the browser.
+    """
+    try:
+        upstream = requests.get(
+            f"{API_BASE}/stream/audio",
+            stream=True,
+            timeout=5
+        )
+        if upstream.status_code != 200:
+            return JsonResponse(
+                {'error': 'Audio stream unavailable'},
+                status=upstream.status_code
+            )
+        return StreamingHttpResponse(
+            upstream.iter_content(chunk_size=4096),
+            content_type=upstream.headers.get('Content-Type', 'audio/ogg')
+        )
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=502)

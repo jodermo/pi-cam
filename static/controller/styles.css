@@ -80,6 +80,7 @@ i.fas{
   height: 100%;
   object-fit: contain;
   overflow: hidden;
+  text-align: center;
 }
 
 .dashboard-grid{

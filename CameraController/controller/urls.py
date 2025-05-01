@@ -20,6 +20,11 @@ urlpatterns = [
     path('record/stop/', views.stop_recording, name='stop_recording'),
     path('camera-frame/', views.camera_frame, name='camera_frame'),
 
+    # Audio endpoints
+    path('api/audio-sources/',      views.audio_sources,    name='api_audio_sources'),
+    path('api/switch-audio/<int:idx>/', views.switch_audio,  name='api_switch_audio'),
+    path('stream/audio/',           views.stream_audio,     name='stream_audio'),
+
     # Public health endpoint
     path('health/', views.health, name='health'),
 

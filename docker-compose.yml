@@ -6,6 +6,8 @@ services:
     restart: always
     devices:
       - "/dev/video0:/dev/video0"
+      - "/dev/snd:/dev/snd"
+    privileged: true
     env_file:
       - ./.env
     environment:

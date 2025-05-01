@@ -17,6 +17,18 @@
       </select>
     </form>
   </div>
+  
+<audio id="live-audio" src="{% url 'stream_audio' %}" autoplay></audio>
+<select id="audio-select">
+  {% for dev in audio_inputs %}
+    <option value="{{ forloop.counter0 }}"
+      {% if forloop.counter0 == active_audio_idx %}selected{% endif %}>
+      {{ dev }}
+    </option>
+  {% endfor %}
+</select>
+<button id="audio-switch-btn">Switch Audio</button>
+
   <div class="header-bar">
     <h1>USB Camera Controller</h1>
     <div class="status-indicator" id="camera-status"></div>
@@ -107,16 +119,6 @@
 
 </div>
 
-<audio id="live-audio" src="{% url 'stream_audio' %}" autoplay></audio>
-<select id="audio-select">
-  {% for dev in audio_inputs %}
-    <option value="{{ forloop.counter0 }}"
-      {% if forloop.counter0 == active_audio_idx %}selected{% endif %}>
-      {{ dev }}
-    </option>
-  {% endfor %}
-</select>
-<button id="audio-switch-btn">Switch Audio</button>
 
 
 {% endblock %}

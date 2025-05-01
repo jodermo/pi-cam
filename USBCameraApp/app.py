@@ -34,7 +34,7 @@ logger = logging.getLogger("camera_service")
 # ----------------------------------------------------------------------------
 RAW_SOURCES        = os.getenv("CAMERA_LOCATIONS", "/dev/video0")
 CAMERA_SOURCES     = [s.strip() for s in RAW_SOURCES.split(",") if s.strip()] or ["/dev/video0"]
-RAW_AUDIO_INPUTS   = os.getenv("AUDIO_INPUTS", "default")
+RAW_AUDIO_INPUTS   = os.getenv("AUDIO_INPUTS", "pulse,alsa_input.usb-046d_0825_123456-02.analog-stereo,hw:1,0")
 AUDIO_INPUTS       = [s.strip() for s in RAW_AUDIO_INPUTS.split(",") if s.strip()] or ["default"]
 
 API_PREFIX         = os.getenv("CAMERA_API_URL", "/api").rstrip("/")

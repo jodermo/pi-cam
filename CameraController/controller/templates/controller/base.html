@@ -25,9 +25,6 @@
         <a href="{% url 'media_browser' %}" class="{% if request.resolver_match.url_name == 'media_browser' %}active{% endif %}">
           <i class="fas fa-photo-video"></i>
         </a>
-        <a href="{% url 'app_settings' %}" class="{% if request.resolver_match.url_name == 'app_settings' %}active{% endif %}">
-          <i class="fas fa-cog"></i>
-        </a>
         <div class="spacer"></div>
         <a href="{% url 'logout' %}">
           <i class="fas fa-sign-out-alt"></i>

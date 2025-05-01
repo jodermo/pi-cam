@@ -29,7 +29,9 @@
 
 {% block content %}
 <div class="dashboard-grid">
-
+  <div id="recording-duration">
+    {% if recording_elapsed %}{{ recording_elapsed }}{% endif %}
+  </div>
   <!-- Live Stream Card -->
   <div class="card stream-card">
     <div class="stream-wrapper">

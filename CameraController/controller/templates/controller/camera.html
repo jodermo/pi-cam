@@ -8,6 +8,25 @@
 </div>
 {% endblock %}
 
+
+{% block actions %}
+{% if camera_list %}
+<div class="camera-source">
+
+    <form id="camera-form" class="camera-select" method="post" action="{% url 'switch_camera' idx=0 %}">
+      {% csrf_token %}
+      <select id="camera-select" name="idx" onchange="updateCameraForm(this.value);">
+        {% for src in camera_list %}
+          <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>{{ src }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
+</div>
+{% endif %}
+
+{% endblock %}
+
 {% block content %}
 <div class="dashboard-grid">
 
@@ -23,7 +42,7 @@
   <div class="modal-wrapper">
     <div class="modal-header">
       <button class="modal-close" id="close-settings">&times;</button>
-      <h2>Image Settings</h2>
+      <h2>Camera Settings</h2>
     </div>
     <div class="modal-content">
       <div class="settings-grid">
@@ -61,55 +80,59 @@
   Camera recovered
 </div>
 {% endblock %}
-{% block navigation %}
 
+{% block navigation %}
   <div class="card navigation-card span-2">
-    <div class="camera-source">
-      {% if camera_list %}
-        <form id="camera-form" class="camera-select" method="post" action="{% url 'switch_camera' idx=0 %}">
-          {% csrf_token %}
-          <select id="camera-select" name="idx" onchange="updateCameraForm(this.value);">
-            {% for src in camera_list %}
-              <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>{{ src }}</option>
-            {% endfor %}
-          </select>
-        </form>
-      {% else %}
-        <p class="muted">No cameras available.</p>
-      {% endif %}
-    </div>
     <div class="navigation-grid">
       <button class="btn-action" onclick="postAction('{% url 'restart' %}')">
         <span class="icon">&#x21bb;</span>
-        Restart
       </button>
       <button class="btn-action" onclick="postAction('{% url 'capture_photo' %}', true)">
         <span class="icon">&#x1f4f7;</span>
-        Snapshot
       </button>
-      <button class="btn-action" onclick="postAction('{% url 'start_recording' %}')">
+
+      {# START RECORD #}
+      <button
+        id="start-recording-btn"
+        class="btn-action {% if is_recording %}active{% endif %}"
+        onclick="postAction('{% url 'start_recording' %}')"
+        {% if is_recording %}disabled{% endif %}
+      >
         <span class="icon">&#x23fa;</span>
-        Record
       </button>
-      <button class="btn-action" onclick="postAction('{% url 'stop_recording' %}')">
+
+      {# STOP RECORD #}
+      <button
+        id="stop-recording-btn"
+        class="btn-action {% if not is_recording %}disabled{% endif %}"
+        onclick="postAction('{% url 'stop_recording' %}')"
+        {% if not is_recording %}disabled{% endif %}
+      >
         <span class="icon">&#x23f9;</span>
-        Stop
       </button>
+
       <button class="btn-action" id="open-settings">
         <span class="icon">&#9881;</span>
-        Image Settings
       </button>
     </div>
 
     <div class="status-bar">
-      <div id="recording-status"></div>
-      <div id="last-video-block"></div>
+      <div id="recording-status">
+        {% if is_recording %}
+          <em>Recording…</em>
+        {% endif %}
+      </div>
+      <div id="last-video-block">
+        {% if last_video_url and not is_recording %}
+          <a href="{{ last_video_url }}">Download last clip</a>
+        {% endif %}
+      </div>
     </div>
   </div>
-</div>
-
-
 {% endblock %}
+
+
+
 {% block scripts %}
 <script>
   // Toggle Settings Modal

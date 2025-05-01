@@ -120,7 +120,7 @@
         <div class="item-controls">
           <a href="{{ photo.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
           <button class="btn-action delete-item"
-                  data-url="{% url 'delete_photo' filename=photo.filename %}">
+                  data-url="{% url 'api_delete_photo' filename=photo.filename %}">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
@@ -143,7 +143,7 @@
         <div class="item-controls">
           <a href="{{ video.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
           <button class="btn-action delete-item"
-                  data-url="{% url 'delete_video' filename=video.filename %}">
+                  data-url="{% url 'api_delete_video' filename=video.filename %}">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
@@ -164,7 +164,7 @@
         <div class="item-controls">
           <a href="{{ tl.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
           <button class="btn-action delete-item"
-                  data-url="{% url 'delete_timelapse' filename=tl.filename %}">
+                  data-url="{% url 'api_delete_timelapse' filename=tl.filename %}">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>

@@ -8,7 +8,7 @@
   .gallery.grid-view { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:1rem; }
   .gallery.list-view { display:block; }
   .gallery.list-view .gallery-item {
-    display:flex; align-items:center; gap:1rem; padding:0.5rem; 
+    display:flex; align-items:center; gap:1rem; padding:0.5rem;
     border:1px solid #ddd; border-radius:4px; margin-bottom:0.5rem;
   }
   .gallery-item { position:relative; background:#fff; border:1px solid #ddd; border-radius:4px; overflow:hidden; }
@@ -23,13 +23,32 @@
   }
   .actions-card {
     background:#f7f7f7; padding:.75rem; border-radius:4px; margin-bottom:1rem;
-    display:flex; align-items:center; gap:.5rem;
+    display:flex; align-items:center; flex-wrap:wrap; gap:.5rem;
   }
   .actions-card .layout-controls { display:flex; gap:.5rem; }
+  .actions-card .batch-controls { display:flex; gap:.5rem; }
   .actions-card .spacer { flex:1; }
   .btn-action { display:inline-flex; align-items:center; gap:.25rem; }
   .btn-action.disabled, .btn-action:disabled { opacity:.5; cursor:not-allowed; }
   .btn-action.active { background:#007bff; color:#fff; }
+
+  /* Modal preview */
+  .modal {
+    display:none; position:fixed; z-index:1000;
+    left:0; top:0; width:100%; height:100%; overflow:auto;
+    background:rgba(0,0,0,0.8);
+  }
+  .modal-content {
+    margin:5% auto; max-width:80%; position:relative;
+  }
+  .modal-content img, .modal-content video {
+    width:100%; height:auto; display:block;
+    border-radius:4px;
+  }
+  .modal-close {
+    position:absolute; top:8px; right:12px; font-size:2rem;
+    color:#fff; cursor:pointer;
+  }
 </style>
 {% endblock %}
 
@@ -45,15 +64,17 @@
 </div>
 {% endblock %}
 
-
 {% block actions %}
-
 {# PHOTOS #}
-<section id="photoActions" class="tab-content active">
+<section id="photosActions" class="tab-content active">
   <div class="actions-card">
     <div class="layout-controls">
       <button id="photos-grid" class="btn-action active"><i class="fas fa-th-large"></i></button>
       <button id="photos-list" class="btn-action"><i class="fas fa-list"></i></button>
+    </div>
+    <div class="batch-controls">
+      <button id="photos-select-all" class="btn-action"><i class="fas fa-check-square"></i> Select All</button>
+      <button id="photos-unselect-all" class="btn-action"><i class="fas fa-square"></i> Unselect All</button>
     </div>
     <div class="spacer"></div>
     <button id="photos-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
@@ -71,11 +92,15 @@
 </section>
 
 {# VIDEOS #}
-<section id="videoActions" class="tab-content" hidden>
+<section id="videosActions" class="tab-content" hidden>
   <div class="actions-card">
     <div class="layout-controls">
       <button id="videos-grid" class="btn-action active"><i class="fas fa-th-large"></i></button>
       <button id="videos-list" class="btn-action"><i class="fas fa-list"></i></button>
+    </div>
+    <div class="batch-controls">
+      <button id="videos-select-all" class="btn-action"><i class="fas fa-check-square"></i> Select All</button>
+      <button id="videos-unselect-all" class="btn-action"><i class="fas fa-square"></i> Unselect All</button>
     </div>
     <div class="spacer"></div>
     <button id="videos-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
@@ -98,6 +123,10 @@
     <div class="layout-controls">
       <button id="tl-grid" class="btn-action active"><i class="fas fa-th-large"></i></button>
       <button id="tl-list" class="btn-action"><i class="fas fa-list"></i></button>
+    </div>
+    <div class="batch-controls">
+      <button id="tl-select-all" class="btn-action"><i class="fas fa-check-square"></i> Select All</button>
+      <button id="tl-unselect-all" class="btn-action"><i class="fas fa-square"></i> Unselect All</button>
     </div>
     <div class="spacer"></div>
     <button id="tl-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
@@ -126,9 +155,9 @@
         <input type="checkbox" class="select-item">
         <img src="{{ photo.url }}" alt="{{ photo.filename }}">
         <div class="item-controls">
+          <button class="btn-action preview-item" data-url="{{ photo.url }}"><i class="fas fa-eye"></i></button>
           <a href="{{ photo.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
-          <button class="btn-action delete-item"
-                  data-url="{% url 'api_delete_photo' filename=photo.filename %}">
+          <button class="btn-action delete-item" data-url="{% url 'api_delete_photo' filename=photo.filename %}">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
@@ -145,13 +174,13 @@
       {% for video in videos %}
       <div class="gallery-item" data-filename="{{ video.filename }}">
         <input type="checkbox" class="select-item">
-        <video controls>
+        <video muted>
           <source src="{{ video.url }}" type="video/mp4">
         </video>
         <div class="item-controls">
+          <button class="btn-action preview-item" data-url="{{ video.url }}"><i class="fas fa-eye"></i></button>
           <a href="{{ video.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
-          <button class="btn-action delete-item"
-                  data-url="{% url 'api_delete_video' filename=video.filename %}">
+          <button class="btn-action delete-item" data-url="{% url 'api_delete_video' filename=video.filename %}">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
@@ -170,9 +199,9 @@
         <input type="checkbox" class="select-item">
         <img src="{{ tl.url }}" alt="{{ tl.filename }}">
         <div class="item-controls">
+          <button class="btn-action preview-item" data-url="{{ tl.url }}"><i class="fas fa-eye"></i></button>
           <a href="{{ tl.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
-          <button class="btn-action delete-item"
-                  data-url="{% url 'api_delete_timelapse' filename=tl.filename %}">
+          <button class="btn-action delete-item" data-url="{% url 'api_delete_timelapse' filename=tl.filename %}">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
@@ -184,20 +213,35 @@
   </section>
 
 </div>
+
+<!-- Preview Modal -->
+<div id="preview-modal" class="modal">
+  <div class="modal-content">
+    <span id="preview-close" class="modal-close">&times;</span>
+    <img id="preview-img" style="display:none;" alt="Preview">
+    <video id="preview-video" controls style="display:none;"></video>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 ;(function(){
   const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
-  // Tab switching
+
+  // --- Tab switching ---
   document.querySelectorAll('.navigation-grid .tab').forEach(tab=>{
-    tab.addEventListener('click',()=>{
+    tab.addEventListener('click', ()=>{
       document.querySelectorAll('.navigation-grid .tab').forEach(t=>t.classList.remove('active'));
       tab.classList.add('active');
-      document.querySelectorAll('.tab-content').forEach(s=>{
-        if(s.id === tab.dataset.target || s.id === tab.dataset.target + 'Actions') { s.classList.add('active'); s.hidden = false; }
-        else { s.classList.remove('active'); s.hidden = true; }
+      document.querySelectorAll('.tab-content').forEach(sec=>{
+        const show1 = tab.dataset.target;
+        const show2 = show1 + 'Actions';
+        if (sec.id === show1 || sec.id === show2) {
+          sec.classList.add('active'); sec.hidden = false;
+        } else {
+          sec.classList.remove('active'); sec.hidden = true;
+        }
       });
     });
   });
@@ -209,12 +253,14 @@
   };
 
   ['photos','videos','tl'].forEach(prefix=>{
-    const gallery   = document.getElementById(prefix+'-gallery'),
-          deleteSel = document.getElementById(prefix+'-delete-selected'),
+    const gallery         = document.getElementById(prefix+'-gallery'),
+          deleteSelBtn    = document.getElementById(prefix+'-delete-selected'),
           downloadSelForm = document.getElementById(prefix+'-download-selected-form'),
           downloadSelBtn  = document.getElementById(prefix+'-download-selected'),
           deleteAllBtn    = document.getElementById(prefix+'-delete-all'),
-          boxes     = gallery.querySelectorAll('.select-item');
+          selectAllBtn    = document.getElementById(prefix+'-select-all'),
+          unselectAllBtn  = document.getElementById(prefix+'-unselect-all'),
+          boxes           = gallery.querySelectorAll('.select-item');
 
     // Layout toggle
     document.getElementById(prefix+'-grid').addEventListener('click', ()=> {
@@ -228,59 +274,107 @@
       document.getElementById(prefix+'-grid').classList.remove('active');
     });
 
+    // Select All / Unselect All
+    selectAllBtn.addEventListener('click', ()=> {
+      boxes.forEach(b=>b.checked = true);
+      updateBatch();
+    });
+    unselectAllBtn.addEventListener('click', ()=> {
+      boxes.forEach(b=>b.checked = false);
+      updateBatch();
+    });
+
+    // Batch select state update
+    function updateBatch(){
+      const any = Array.from(boxes).some(b=>b.checked);
+      deleteSelBtn.disabled = !any;
+      deleteSelBtn.classList.toggle('disabled', !any);
+      downloadSelBtn.disabled = !any;
+      downloadSelBtn.classList.toggle('disabled', !any);
+    }
+    boxes.forEach(b=>b.addEventListener('change', updateBatch));
+
     // Per-item delete
     gallery.querySelectorAll('.delete-item').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         if(!confirm('Delete this item?')) return;
-        const res = await fetch(btn.dataset.url, { method:'DELETE', credentials:'same-origin', headers:{ 'X-CSRFToken': csrfToken }});
+        const res = await fetch(btn.dataset.url, {
+          method:'DELETE', credentials:'same-origin',
+          headers:{ 'X-CSRFToken': csrfToken }
+        });
         if(res.ok) btn.closest('.gallery-item').remove();
         else alert('Error deleting item: ' + res.status);
       });
     });
 
-    // Batch select
-    function updateBatch() {
-      const any = [...boxes].some(b=>b.checked);
-      deleteSel.disabled = !any;    deleteSel.classList.toggle('disabled',!any);
-      downloadSelBtn.disabled = !any; downloadSelBtn.classList.toggle('disabled',!any);
-    }
-    boxes.forEach(b=>b.addEventListener('change', updateBatch));
-
-    // Batch delete-selected
-    deleteSel.addEventListener('click', async ()=>{
+    // Batch delete
+    deleteSelBtn.addEventListener('click', async ()=>{
       if(!confirm('Delete selected?')) return;
-      const selectedBoxes = [...boxes].filter(b=>b.checked);
-      await Promise.all(selectedBoxes.map(box=>{
-        const item = box.closest('.gallery-item');
-        return fetch(item.querySelector('.delete-item').dataset.url, {method:'DELETE', credentials:'same-origin', headers:{ 'X-CSRFToken': csrfToken }})
-          .then(res=>{ if(res.ok) item.remove(); else console.error('Failed to delete', res.status); });
+      const sel = Array.from(boxes).filter(b=>b.checked);
+      await Promise.all(sel.map(b=>{
+        const item = b.closest('.gallery-item');
+        return fetch(item.querySelector('.delete-item').dataset.url, {
+          method:'DELETE', credentials:'same-origin',
+          headers:{ 'X-CSRFToken': csrfToken }
+        }).then(res=> res.ok ? item.remove() : null);
       }));
       updateBatch();
     });
 
-    // Batch download-selected
+    // Batch download
     downloadSelBtn.addEventListener('click', ()=>{
-      const selectedNames = [...boxes].filter(b=>b.checked).map(b=>b.closest('.gallery-item').dataset.filename);
-      if(!selectedNames.length) return;
-      const inputContainer = downloadSelForm.querySelector('.selected-inputs');
-      inputContainer.innerHTML = '';
-      selectedNames.forEach(name=>{
-        const input = document.createElement('input'); input.type = 'hidden'; input.name = 'filenames'; input.value = name;
-        inputContainer.appendChild(input);
+      const names = Array.from(boxes).filter(b=>b.checked)
+                     .map(b=>b.closest('.gallery-item').dataset.filename);
+      if(!names.length) return;
+      const container = downloadSelForm.querySelector('.selected-inputs');
+      container.innerHTML = '';
+      names.forEach(n=>{
+        const inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = 'filenames'; inp.value = n;
+        container.appendChild(inp);
       });
       downloadSelForm.submit();
     });
 
-    // Batch delete-all
+    // Batch delete all
     deleteAllBtn.addEventListener('click', async ()=>{
       if(!confirm('Delete all?')) return;
-      const apiUrl = apiDeleteAll[prefix];
-      console.log('Deleting all via', apiUrl);
-      const res = await fetch(apiUrl, { method:'DELETE', credentials:'same-origin', headers:{ 'X-CSRFToken': csrfToken } });
+      const res = await fetch(apiDeleteAll[prefix], {
+        method:'DELETE', credentials:'same-origin',
+        headers:{ 'X-CSRFToken': csrfToken }
+      });
       if(res.ok) gallery.innerHTML = '';
       else alert('Failed to delete all: ' + res.status);
     });
   });
+
+  // Preview modal logic
+  const modal      = document.getElementById('preview-modal'),
+        imgEl      = document.getElementById('preview-img'),
+        videoEl    = document.getElementById('preview-video'),
+        closeBtn   = document.getElementById('preview-close');
+
+  document.querySelectorAll('.preview-item').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const url = btn.dataset.url;
+      if(/\.(mp4|webm|ogg)$/i.test(url)){
+        imgEl.style.display = 'none';
+        videoEl.src = url; videoEl.style.display = 'block';
+      } else {
+        videoEl.style.display = 'none';
+        imgEl.src = url; imgEl.style.display = 'block';
+      }
+      modal.style.display = 'block';
+    });
+  });
+
+  function closeModal(){
+    modal.style.display = 'none';
+    videoEl.pause();
+  }
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', e=>{ if(e.target===modal) closeModal(); });
+
 })();
 </script>
 {% endblock %}

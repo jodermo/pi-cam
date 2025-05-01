@@ -775,3 +775,9 @@ def download_all_timelapse(request):
     if not filenames:
         return HttpResponseBadRequest('No timelapse frames available')
     return _build_zip_response(filenames, tl_dir, folder, 'all_timelapse.zip')
+
+
+@login_required
+def serve_video(request, filename):
+    path = os.path.join(settings.MEDIA_ROOT, 'videos', filename)
+    return FileResponse(open(path, 'rb'), content_type='video/mp4')

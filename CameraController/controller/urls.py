@@ -45,5 +45,5 @@ urlpatterns = [
 
     # Media Brwoser
     path('media-browser/', views.media_browser, name='media_browser'),
-
+    path('video/', views.serve_video, name='serve_video'),
 ]

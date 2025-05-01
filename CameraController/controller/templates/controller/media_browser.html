@@ -111,7 +111,9 @@
       {% for video in videos %}
       <div class="gallery-item" data-filename="{{ video.filename }}">
         <input type="checkbox" class="select-item">
-        <video src="{{ video.url }}" controls></video>
+        <video controls>
+          <source src="{{ video.url }}" type="video/mp4">
+        </video>
         <div class="item-controls">
           <a href="{{ video.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
           <button class="btn-action delete-item"

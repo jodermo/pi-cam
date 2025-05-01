@@ -8,11 +8,6 @@ server {
     listen 80;
     server_name ${DOMAIN};
 
-    types {
-      video/mp4  mp4;
-    }
-    default_type  application/octet-stream;
-
     # MJPEG stream - proxy directly to camera container
     location = /api/stream {
         proxy_pass         http://pi-cam-camera:8000/api/stream;

@@ -1,10 +1,12 @@
 class CameraController {
     constructor(config) {
       // Configuration from template: CSRF, endpoints, API URLs, settings
-      this.config = config;
+      this.config = config ||  window.CameraConfig;
       this.csrfToken = config.csrfToken;
       this.recordStart = null;
       this.recordTimer = null;
+        console.log('CameraController', config,  window.CameraConfig);
+     
     }
   
     // =========== Camera Controls ===========
@@ -13,7 +15,9 @@ class CameraController {
       const modal = document.getElementById('settings-modal');
       document.getElementById('open-settings')?.addEventListener('click', () => modal.setAttribute('aria-hidden','false'));
       document.getElementById('close-settings')?.addEventListener('click', () => modal.setAttribute('aria-hidden','true'));
-      modal.querySelector('.modal-backdrop')?.addEventListener('click', () => modal.setAttribute('aria-hidden','true'));
+      if(modal){
+        modal.querySelector('.modal-backdrop')?.addEventListener('click', () => modal.setAttribute('aria-hidden','true'));
+      }
   
       // Sync sliders and inputs, auto-submit on change
       (this.config.settings || []).forEach(({ name }) => {
@@ -90,8 +94,8 @@ class CameraController {
         modal.style.display = 'none';
         videoEl.pause();
       };
-      closeBtn.addEventListener('click', closeModal);
-      modal.addEventListener('click', e => e.target === modal && closeModal());
+      closeBtn?.addEventListener('click', closeModal);
+      modal?.addEventListener('click', e => e.target === modal && closeModal());
     }
   
     // =========== Batch Helper ===========
@@ -196,7 +200,7 @@ class CameraController {
   
       const resizeCanvas = () => { canvas.width=1920; canvas.height=1080; };
       const formatTime = src => {
-        const m=src.match(/(\d{4})(\d{2})(\d{2})[_-](\d{2})(\d{2})(\d{2})/);
+        const m= src ? src.match(/(\d{4})(\d{2})(\d{2})[_-](\d{2})(\d{2})(\d{2})/) : 0;
         if(!m) return '';
         const [y,mo,d,h,mi,s] = m.slice(1).map(Number);
         return new Date(y,mo-1,d,h,mi,s).toLocaleString();
@@ -237,10 +241,12 @@ class CameraController {
       .then(res=>res.json().then(data=>({ok:res.ok,data})))
       .then(({ok,data})=>{ if(!ok) alert(`Error setting ${name}: ${data.detail||data.error}`); })
       .catch(err=>alert(`Network error: ${err}`));
+      console.log('submitSetting',url, name, value);
     }
   
     postAction(actionKey, isPhoto=false) {
-      const url = this.config.urls[actionKey];
+      // Allow actionKey to be either a configured key or a direct URL
+      const url = this.config.urls[actionKey] || actionKey;
       fetch(url, {
         method:'POST', credentials:'same-origin', headers:{ 'X-CSRFToken': this.csrfToken }
       })
@@ -271,7 +277,10 @@ class CameraController {
     updateClock() {
       const now = new Date();
       const hh=this.pad(now.getHours()), mm=this.pad(now.getMinutes()), ss=this.pad(now.getSeconds());
-      document.getElementById('current-time').innerText = `${hh}:${mm}:${ss}`;
+      const currentTimeElm = document.getElementById('current-time');
+      if(currentTimeElm){
+        document.getElementById('current-time').innerText = `${hh}:${mm}:${ss}`;
+      }
     }
   
     startRecordingTimer() {
@@ -300,3 +309,4 @@ class CameraController {
   
   // Expose globally
   window.CameraController = CameraController;
+  

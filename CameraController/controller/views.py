@@ -143,14 +143,18 @@ def camera(request):
         rel = rel.replace('\\', '/')
         last_video_url = settings.MEDIA_URL.rstrip('/') + '/' + rel
 
+    settings_json = json.dumps(settings_list)
+
     return render(request, 'controller/camera.html', {
         'stream_url': STREAM_PATH,
         'settings_fields': settings_list,
+        'settings_json': settings_json, 
         'db_settings': db_settings,
         'camera_list'    : camera_list if len(camera_list) > 1 else None,
         'active_index': active_index,
         'is_recording': is_recording,
         'last_video_url': last_video_url,
+        'recording_start_time': _recording_start_time,
     })
 
 
@@ -423,7 +427,8 @@ def timelapse_gallery(request):
 
     return render(request, 'controller/timelapse_gallery.html', {
         'images': images_urls,
-        'form': form
+        'form': form,
+        'settings_json': []
     })
 
 @login_required
@@ -451,6 +456,7 @@ def media_browser(request):
         'photos':    photos,
         'videos':    videos,
         'timelapses': timelapse,
+        'settings_json': []
     })
 
 @login_required

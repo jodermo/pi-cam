@@ -10,13 +10,19 @@
     href="{% static 'Font-Awesome/css/all.min.css' %}"
   />
   <link rel="stylesheet" href="{% static 'controller/styles.css' %}" />
+
+  
   <script>
+
+    const settings = {{ settings_json|safe }};
+  
     window.CameraConfig = {
       csrfToken: '{{ csrf_token }}',
       urls: {
+        restart:        '{% url "restart" %}',
+        capturePhoto:   '{% url "capture_photo" %}',
         startRecording: '{% url "start_recording" %}',
         stopRecording:  '{% url "stop_recording" %}',
-        takePhoto:      '{% url "take_photo" %}',
         setSetting:     '{% url "set_setting" setting="__dummy__" %}'
       },
       api: {
@@ -24,10 +30,10 @@
         videosList:    '{% url "api_video_list" %}',
         timelapseList: '{% url "api_timelapse_list" %}'
       },
-      settings: {{ settings_fields|safe }}
+      settings: settings
     };
-    </script>
-    
+  </script>
+  
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -57,8 +63,9 @@
   </div>
   <script src="{% static 'controller/cameraController.js' %}"></script>
   <script>
+    let controller;
     document.addEventListener('DOMContentLoaded', () => {
-      const controller = new CameraController(window.CameraConfig);
+      controller =  new CameraController(window.CameraConfig);
       controller.initCameraView();
       controller.initMediaBrowser();
       controller.initTimelapseGallery();

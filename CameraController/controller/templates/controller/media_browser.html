@@ -1,6 +1,38 @@
 {% extends "controller/base.html" %}
 {% load static %}
 
+{% block extrahead %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="…" crossorigin="anonymous"/>
+<style>
+  .media-container { max-width:1200px; margin:auto; padding:1rem; }
+  .gallery.grid-view { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:1rem; }
+  .gallery.list-view { display:block; }
+  .gallery.list-view .gallery-item {
+    display:flex; align-items:center; gap:1rem; padding:0.5rem; 
+    border:1px solid #ddd; border-radius:4px; margin-bottom:0.5rem;
+  }
+  .gallery-item { position:relative; background:#fff; border:1px solid #ddd; border-radius:4px; overflow:hidden; }
+  .gallery-item img, .gallery-item video { width:100%; display:block; }
+  .gallery.list-view .gallery-item img,
+  .gallery.list-view .gallery-item video { width:120px; flex-shrink:0; }
+  .item-controls {
+    position:absolute; top:8px; right:8px; display:flex; gap:0.25rem;
+  }
+  .item-controls a, .item-controls button {
+    background:rgba(255,255,255,0.9); border:none; padding:0.25rem; border-radius:4px; cursor:pointer;
+  }
+  .actions-card {
+    background:#f7f7f7; padding:.75rem; border-radius:4px; margin-bottom:1rem;
+    display:flex; align-items:center; gap:.5rem;
+  }
+  .actions-card .layout-controls { display:flex; gap:.5rem; }
+  .actions-card .spacer { flex:1; }
+  .btn-action { display:inline-flex; align-items:center; gap:.25rem; }
+  .btn-action.disabled, .btn-action:disabled { opacity:.5; cursor:not-allowed; }
+  .btn-action.active { background:#007bff; color:#fff; }
+</style>
+{% endblock %}
+
 {% block title %}Media Browser{% endblock %}
 
 {% block navigation %}
@@ -43,12 +75,15 @@
         <img src="{{ photo.url }}" alt="{{ photo.filename }}">
         <div class="item-controls">
           <a href="{{ photo.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
-          <button class="btn-action delete-item" data-url="{% url 'api_delete_photo' filename=photo.filename %}">
+          <button class="btn-action delete-item"
+                  data-url="{% url 'api_delete_photo' filename=photo.filename %}">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
       </div>
-      {% empty %}<p class="muted">No photos.</p>{% endfor %}
+      {% empty %}
+      <p class="muted">No photos available.</p>
+      {% endfor %}
     </div>
   </section>
 
@@ -79,12 +114,15 @@
         <video src="{{ video.url }}" controls></video>
         <div class="item-controls">
           <a href="{{ video.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
-          <button class="btn-action delete-item" data-url="{% url 'api_delete_video' filename=video.filename %}">
+          <button class="btn-action delete-item"
+                  data-url="{% url 'api_delete_video' filename=video.filename %}">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
       </div>
-      {% empty %}<p class="muted">No videos.</p>{% endfor %}
+      {% empty %}
+      <p class="muted">No videos available.</p>
+      {% endfor %}
     </div>
   </section>
 
@@ -115,12 +153,15 @@
         <img src="{{ tl.url }}" alt="{{ tl.filename }}">
         <div class="item-controls">
           <a href="{{ tl.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
-          <button class="btn-action delete-item" data-url="{% url 'api_delete_timelapse' filename=tl.filename %}">
+          <button class="btn-action delete-item"
+                  data-url="{% url 'api_delete_timelapse' filename=tl.filename %}">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
       </div>
-      {% empty %}<p class="muted">No timelapse frames.</p>{% endfor %}
+      {% empty %}
+      <p class="muted">No timelapse frames available.</p>
+      {% endfor %}
     </div>
   </section>
 
@@ -130,29 +171,25 @@
 {% block scripts %}
 <script>
 ;(function(){
-  // TAB SWITCH
+  // Tab switching
   document.querySelectorAll('.navigation-grid .tab').forEach(tab=>{
-    tab.addEventListener('click', ()=>{
+    tab.addEventListener('click',()=>{
       document.querySelectorAll('.navigation-grid .tab').forEach(t=>t.classList.remove('active'));
       tab.classList.add('active');
-      document.querySelectorAll('.tab-content').forEach(sec=>sec.hidden = sec.id !== tab.dataset.target);
+      document.querySelectorAll('.tab-content').forEach(s=> s.id === tab.dataset.target ? s.classList.add('active') & (s.hidden=false) : s.classList.remove('active') & (s.hidden=true));
     });
   });
 
-  // Helper to wire each section
+  // Section helpers
   ['photos','videos','tl'].forEach(prefix=>{
     const gallery   = document.getElementById(prefix+'-gallery'),
           deleteSel = document.getElementById(prefix+'-delete-selected'),
           downloadSelForm = document.getElementById(prefix+'-download-selected-form'),
           downloadSelBtn  = document.getElementById(prefix+'-download-selected'),
-          deleteAllBtn = document.getElementById(prefix+'-delete-all'),
-          downloadAllBtnForms = {
-            photos: '{% url "download_all_photos" %}',
-            videos: '{% url "download_all_videos" %}',
-            tl:     '{% url "download_all_timelapse" %}'
-          };
+          deleteAllBtn    = document.getElementById(prefix+'-delete-all'),
+          boxes     = gallery.querySelectorAll('.select-item');
 
-    // layout toggles
+    // Layout toggle
     document.getElementById(prefix+'-grid').addEventListener('click', ()=> {
       gallery.classList.replace('list-view','grid-view');
       document.getElementById(prefix+'-grid').classList.add('active');
@@ -164,67 +201,55 @@
       document.getElementById(prefix+'-grid').classList.remove('active');
     });
 
-    // per-item deletes
+    // Per-item delete
     gallery.querySelectorAll('.delete-item').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         if(!confirm('Delete this item?')) return;
-        const res = await fetch(btn.dataset.url, {
-          method:'DELETE',
-          headers:{ 'X-CSRFToken':'{{ csrf_token }}' }
-        });
+        const res = await fetch(btn.dataset.url, { method:'DELETE', headers:{ 'X-CSRFToken':'{{ csrf_token }}' }});
         if(res.ok) btn.closest('.gallery-item').remove();
       });
     });
 
-    // batch select handling
-    const boxes = gallery.querySelectorAll('.select-item');
+    // Batch select
     function updateBatch() {
       const any = [...boxes].some(b=>b.checked);
-      deleteSel.disabled = !any;
-      downloadSelBtn.disabled = !any;
-      deleteSel.classList.toggle('disabled', !any);
-      downloadSelBtn.classList.toggle('disabled', !any);
+      deleteSel.disabled = !any;    deleteSel.classList.toggle('disabled',!any);
+      downloadSelBtn.disabled = !any; downloadSelBtn.classList.toggle('disabled',!any);
     }
     boxes.forEach(b=>b.addEventListener('change', updateBatch));
 
-    // batch delete-selected
+    // Batch delete-selected
     deleteSel.addEventListener('click', async ()=>{
       if(!confirm('Delete selected?')) return;
       const names = [...boxes].filter(b=>b.checked).map(b=>b.closest('.gallery-item').dataset.filename);
-      const apiMap = {
-        photos: '{% url "api_photo_list" %}',
-        videos: '{% url "api_video_list" %}',
-        tl:     '{% url "api_timelapse_list" %}'
-      };
-      const res = await fetch(apiMap[prefix], {
+      const api = {
+        photos: '{% url "api_delete_all_photos" %}'.replace('/delete-all/','/'),
+        videos: '{% url "api_delete_all_videos" %}'.replace('/delete-all/','/'),
+        tl:     '{% url "api_delete_all_timelapse" %}'.replace('/delete-all/','/')
+      }[prefix];
+      const res = await fetch(api, {
         method:'DELETE',
-        headers:{
-          'Content-Type':'application/json',
-          'X-CSRFToken':'{{ csrf_token }}'
-        },
+        headers:{ 'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}' },
         body: JSON.stringify({ filenames: names })
       });
       if(res.ok) window.location.reload();
     });
 
-    // batch download-selected
-    downloadSelForm.addEventListener('submit', e=>{
+    // Batch download-selected
+    downloadSelForm.addEventListener('submit', ()=>{
       const names = [...boxes].filter(b=>b.checked).map(b=>b.closest('.gallery-item').dataset.filename);
       document.getElementById(prefix+'-filenames').value = names;
     });
 
-    // batch delete-all
+    // Batch delete-all
     deleteAllBtn.addEventListener('click', async ()=>{
       if(!confirm('Delete all?')) return;
-      const apiMap = {
+      const apiAll = {
         photos: '{% url "api_delete_all_photos" %}',
         videos: '{% url "api_delete_all_videos" %}',
         tl:     '{% url "api_delete_all_timelapse" %}'
-      };
-      const res = await fetch(apiMap[prefix], {
-        method:'DELETE',
-        headers:{ 'X-CSRFToken':'{{ csrf_token }}' }
-      });
+      }[prefix];
+      const res = await fetch(apiAll, { method:'DELETE', headers:{ 'X-CSRFToken':'{{ csrf_token }}' }});
       if(res.ok) window.location.reload();
     });
   });

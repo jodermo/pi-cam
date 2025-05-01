@@ -59,8 +59,8 @@
       <button id="photos-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
       <form id="photos-download-selected-form" method="post" action="{% url 'download_selected_photos' %}">
         {% csrf_token %}
-        <input type="hidden" name="filenames" id="photos-filenames">
-        <button id="photos-download-selected" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
+        <div class="selected-inputs"></div>
+        <button id="photos-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
       </form>
       <form method="post" action="{% url 'download_all_photos' %}">
         {% csrf_token %}
@@ -98,8 +98,8 @@
       <button id="videos-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
       <form id="videos-download-selected-form" method="post" action="{% url 'download_selected_videos' %}">
         {% csrf_token %}
-        <input type="hidden" name="filenames" id="videos-filenames">
-        <button id="videos-download-selected" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
+        <div class="selected-inputs"></div>
+        <button id="videos-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
       </form>
       <form method="post" action="{% url 'download_all_videos' %}">
         {% csrf_token %}
@@ -137,8 +137,8 @@
       <button id="tl-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
       <form id="tl-download-selected-form" method="post" action="{% url 'download_selected_timelapse' %}">
         {% csrf_token %}
-        <input type="hidden" name="filenames" id="tl-filenames">
-        <button id="tl-download-selected" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
+        <div class="selected-inputs"></div>
+        <button id="tl-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
       </form>
       <form method="post" action="{% url 'download_all_timelapse' %}">
         {% csrf_token %}
@@ -171,16 +171,19 @@
 {% block scripts %}
 <script>
 ;(function(){
+  const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
   // Tab switching
   document.querySelectorAll('.navigation-grid .tab').forEach(tab=>{
     tab.addEventListener('click',()=>{
       document.querySelectorAll('.navigation-grid .tab').forEach(t=>t.classList.remove('active'));
       tab.classList.add('active');
-      document.querySelectorAll('.tab-content').forEach(s=> s.id === tab.dataset.target ? s.classList.add('active') & (s.hidden=false) : s.classList.remove('active') & (s.hidden=true));
+      document.querySelectorAll('.tab-content').forEach(s=>{
+        if(s.id === tab.dataset.target) { s.classList.add('active'); s.hidden = false; }
+        else { s.classList.remove('active'); s.hidden = true; }
+      });
     });
   });
 
-  // Section helpers
   ['photos','videos','tl'].forEach(prefix=>{
     const gallery   = document.getElementById(prefix+'-gallery'),
           deleteSel = document.getElementById(prefix+'-delete-selected'),
@@ -205,7 +208,7 @@
     gallery.querySelectorAll('.delete-item').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         if(!confirm('Delete this item?')) return;
-        const res = await fetch(btn.dataset.url, { method:'DELETE', headers:{ 'X-CSRFToken':'{{ csrf_token }}' }});
+        const res = await fetch(btn.dataset.url, { method:'DELETE', headers:{ 'X-CSRFToken': csrfToken }});
         if(res.ok) btn.closest('.gallery-item').remove();
       });
     });
@@ -221,24 +224,29 @@
     // Batch delete-selected
     deleteSel.addEventListener('click', async ()=>{
       if(!confirm('Delete selected?')) return;
-      const names = [...boxes].filter(b=>b.checked).map(b=>b.closest('.gallery-item').dataset.filename);
-      const api = {
-        photos: '{% url "api_delete_all_photos" %}',
-        videos: '{% url "api_delete_all_videos" %}',
-        tl:     '{% url "api_delete_all_timelapse" %}'
-      }[prefix];
-      const res = await fetch(api, {
-        method:'DELETE',
-        headers:{ 'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}' },
-        body: JSON.stringify({ filenames: names })
+      const selectedBoxes = [...boxes].filter(b=>b.checked);
+      const deletePromises = selectedBoxes.map(box=>{
+        const item = box.closest('.gallery-item');
+        const url = item.querySelector('.delete-item').dataset.url;
+        return fetch(url, {method:'DELETE', headers:{ 'X-CSRFToken': csrfToken }})
+          .then(res=>{ if(res.ok) item.remove(); });
       });
-      if(res.ok) window.location.reload();
+      await Promise.all(deletePromises);
+      updateBatch();
     });
 
     // Batch download-selected
-    downloadSelForm.addEventListener('submit', ()=>{
-      const names = [...boxes].filter(b=>b.checked).map(b=>b.closest('.gallery-item').dataset.filename);
-      document.getElementById(prefix+'-filenames').value = names;
+    downloadSelBtn.addEventListener('click', ()=>{
+      const selectedNames = [...boxes].filter(b=>b.checked).map(b=>b.closest('.gallery-item').dataset.filename);
+      if(!selectedNames.length) return;
+      const inputContainer = downloadSelForm.querySelector('.selected-inputs');
+      inputContainer.innerHTML = '';
+      selectedNames.forEach(name=>{
+        const input = document.createElement('input');
+        input.type = 'hidden'; input.name = 'filenames'; input.value = name;
+        inputContainer.appendChild(input);
+      });
+      downloadSelForm.submit();
     });
 
     // Batch delete-all
@@ -249,7 +257,7 @@
         videos: '{% url "api_delete_all_videos" %}',
         tl:     '{% url "api_delete_all_timelapse" %}'
       }[prefix];
-      const res = await fetch(apiAll, { method:'DELETE', headers:{ 'X-CSRFToken':'{{ csrf_token }}' }});
+      const res = await fetch(apiAll, { method:'DELETE', headers:{ 'X-CSRFToken': csrfToken } });
       if(res.ok) window.location.reload();
     });
   });

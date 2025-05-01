@@ -184,6 +184,12 @@
     });
   });
 
+  const apiDeleteAll = {
+    photos: '{% url "api_delete_all_photos" %}',
+    videos: '{% url "api_delete_all_videos" %}',
+    tl:     '{% url "api_delete_all_timelapse" %}'
+  };
+
   ['photos','videos','tl'].forEach(prefix=>{
     const gallery   = document.getElementById(prefix+'-gallery'),
           deleteSel = document.getElementById(prefix+'-delete-selected'),
@@ -208,8 +214,9 @@
     gallery.querySelectorAll('.delete-item').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         if(!confirm('Delete this item?')) return;
-        const res = await fetch(btn.dataset.url, { method:'DELETE', headers:{ 'X-CSRFToken': csrfToken }});
+        const res = await fetch(btn.dataset.url, { method:'DELETE', credentials:'same-origin', headers:{ 'X-CSRFToken': csrfToken }});
         if(res.ok) btn.closest('.gallery-item').remove();
+        else alert('Error deleting item: ' + res.status);
       });
     });
 
@@ -225,13 +232,11 @@
     deleteSel.addEventListener('click', async ()=>{
       if(!confirm('Delete selected?')) return;
       const selectedBoxes = [...boxes].filter(b=>b.checked);
-      const deletePromises = selectedBoxes.map(box=>{
+      await Promise.all(selectedBoxes.map(box=>{
         const item = box.closest('.gallery-item');
-        const url = item.querySelector('.delete-item').dataset.url;
-        return fetch(url, {method:'DELETE', headers:{ 'X-CSRFToken': csrfToken }})
-          .then(res=>{ if(res.ok) item.remove(); });
-      });
-      await Promise.all(deletePromises);
+        return fetch(item.querySelector('.delete-item').dataset.url, {method:'DELETE', credentials:'same-origin', headers:{ 'X-CSRFToken': csrfToken }})
+          .then(res=>{ if(res.ok) item.remove(); else console.error('Failed to delete', res.status); });
+      }));
       updateBatch();
     });
 
@@ -242,8 +247,7 @@
       const inputContainer = downloadSelForm.querySelector('.selected-inputs');
       inputContainer.innerHTML = '';
       selectedNames.forEach(name=>{
-        const input = document.createElement('input');
-        input.type = 'hidden'; input.name = 'filenames'; input.value = name;
+        const input = document.createElement('input'); input.type = 'hidden'; input.name = 'filenames'; input.value = name;
         inputContainer.appendChild(input);
       });
       downloadSelForm.submit();
@@ -252,13 +256,11 @@
     // Batch delete-all
     deleteAllBtn.addEventListener('click', async ()=>{
       if(!confirm('Delete all?')) return;
-      const apiAll = {
-        photos: '{% url "api_delete_all_photos" %}',
-        videos: '{% url "api_delete_all_videos" %}',
-        tl:     '{% url "api_delete_all_timelapse" %}'
-      }[prefix];
-      const res = await fetch(apiAll, { method:'DELETE', headers:{ 'X-CSRFToken': csrfToken } });
-      if(res.ok) window.location.reload();
+      const apiUrl = apiDeleteAll[prefix];
+      console.log('Deleting all via', apiUrl);
+      const res = await fetch(apiUrl, { method:'DELETE', credentials:'same-origin', headers:{ 'X-CSRFToken': csrfToken } });
+      if(res.ok) gallery.innerHTML = '';
+      else alert('Failed to delete all: ' + res.status);
     });
   });
 })();

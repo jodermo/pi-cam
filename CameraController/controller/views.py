@@ -120,47 +120,58 @@ def logout_view(request):
 
 @login_required
 def camera(request):
+    # ——— Camera settings from DB ———
     settings_obj, _ = CameraSettings.objects.get_or_create(pk=1)
     db_settings = {
-        'brightness': settings_obj.brightness,
-        'contrast': settings_obj.contrast,
-        'saturation': settings_obj.saturation,
-        'hue': settings_obj.hue,
-        'gain': settings_obj.gain,
-        'exposure': settings_obj.manual_exposure,
+        'brightness':    settings_obj.brightness,
+        'contrast':      settings_obj.contrast,
+        'saturation':    settings_obj.saturation,
+        'hue':           settings_obj.hue,
+        'gain':          settings_obj.gain,
+        'exposure':      settings_obj.manual_exposure,
         'auto_exposure': settings_obj.auto_exposure,
     }
 
-    camera_list = ["/dev/video0"]
-    active_index = 0
-
-    settings_list = []
-    for key in ['brightness', 'contrast', 'saturation', 'hue', 'gain', 'exposure']:
-        settings_list.append({'name': key, 'value': db_settings[key]})
-
-    is_recording = _recording_thread is not None and _recording_thread.is_alive()
-    last_video_url = None
-
-    if _recording_path and not is_recording:
-        rel = os.path.relpath(_recording_path, getattr(settings, 'MEDIA_ROOT', ''))
-        rel = rel.replace('\\', '/')
-        last_video_url = settings.MEDIA_URL.rstrip('/') + '/' + rel
-
+    # ——— Build the list for your JS sliders ———
+    settings_list = [
+        {'name': key, 'value': db_settings[key]}
+        for key in ['brightness','contrast','saturation','hue','gain','exposure']
+    ]
     settings_json = json.dumps(settings_list)
 
+    # ——— Recording state ———
+    is_recording = _recording_thread is not None and _recording_thread.is_alive()
+    last_video_url = None
+    if _recording_path and not is_recording:
+        rel = os.path.relpath(_recording_path, getattr(settings, 'MEDIA_ROOT', ''))
+        rel = rel.replace('\\','/')
+        last_video_url = settings.MEDIA_URL.rstrip('/') + '/' + rel
+
+    # ——— Audio inputs from FastAPI ———
+    try:
+        resp = requests.get(f"{API_BASE}/audio-sources", timeout=3)
+        resp.raise_for_status()
+        audio_data = resp.json()
+        audio_inputs      = audio_data.get('sources', [])
+        active_audio_idx  = audio_data.get('active_idx', 0)
+    except Exception:
+        audio_inputs     = []
+        active_audio_idx = 0
+
+    # ——— Render the template ———
     return render(request, 'controller/camera.html', {
         'stream_url': STREAM_PATH,
         'settings_fields': settings_list,
-        'settings_json': settings_json, 
+        'settings_json': settings_json,
         'db_settings': db_settings,
-        'camera_list'    : camera_list if len(camera_list) > 1 else None,
-        'active_index': active_index,
+        'camera_list': None,            # or your actual list if multi-cam
+        'active_index': 0,
         'is_recording': is_recording,
         'last_video_url': last_video_url,
         'recording_start_time': _recording_start_time,
+        'audio_inputs': audio_inputs,
+        'active_audio_idx': active_audio_idx,
     })
-
-
 
 @login_required
 @require_POST

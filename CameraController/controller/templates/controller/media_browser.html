@@ -220,8 +220,8 @@
     btn.addEventListener('click', e=>{
       const item = e.currentTarget.closest('.gallery-item'),
             id   = item.dataset.id;
-      fetch(`${location.pathname}${id}/`, { 
-        method: 'DELETE', 
+      fetch(`{% url 'api_delete_photo' filename='__' %}`.replace('__', id), {
+        method: 'DELETE',
         headers:{ 'X-CSRFToken':'{{ csrf_token }}' }
       }).then(r=> r.ok && item.remove());
     });
@@ -236,8 +236,8 @@
   checkboxes.forEach(cb=> cb.addEventListener('change', updateBatchBtn));
   deleteSelBtn.addEventListener('click', ()=>{
     const ids = [...checkboxes].filter(c=>c.checked).map(c=>c.dataset.id);
-    fetch('{% url "photos_api" %}', { 
-      method: 'DELETE', 
+    fetch('{% url "api_photo_list" %}', {
+      method: 'DELETE',
       headers: {
         'Content-Type':'application/json',
         'X-CSRFToken':'{{ csrf_token }}'

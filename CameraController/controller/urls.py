@@ -28,7 +28,7 @@ urlpatterns = [
     path('api/snapshot/', views.capture_photo, name='api_snapshot'),
 
     # Photos
-    path('api/photos/', views.photos_api, name='api_media_list'),
+    path('api/photos/', views.photos_api, name='api_photo_list'),
     path('api/photos/<str:filename>/', views.delete_photo, name='api_delete_photo'),
     path('api/photos/delete-all/', views.delete_all_photos, name='api_delete_all_photos'),
     path('download/photos/selected/', views.download_selected_photos, name='download_selected_photos'),

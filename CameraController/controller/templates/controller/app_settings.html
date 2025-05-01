@@ -1,10 +1,5 @@
-{% extends "controller/base.html" %}
-{% load static %}
-
-{% block title %}Application Settings{% endblock %}
-
 {% block content %}
-<form method="post" class="app-settings-form">
+<form method="post" id="app-settings-form" class="app-settings-form">
   {% csrf_token %}
   {% for field in form %}
     <div class="form-group">
@@ -23,8 +18,15 @@
 
 {% block navigation %}
 <div class="card navigation-card span-2">
-  <div class="navigation-grid ">
-    <button type="submit"><span class="icon">&#128190;</span> Save Settings</button>
+  <div class="navigation-grid">
+    <button 
+      type="submit" 
+      form="app-settings-form" 
+      class="btn-action"
+    >
+      <i class="fas fa-save" aria-hidden="true"></i>
+      <span>Save Settings</span>
+    </button>
   </div>
 </div>
 {% endblock %}

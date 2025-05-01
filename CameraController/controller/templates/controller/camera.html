@@ -86,19 +86,19 @@
 
     <div class="navigation-grid">
       <button class="btn-action" onclick="postAction('{% url 'restart' %}')">
-        <span class="icon">&#x21bb;</span>
+        <i class="fas fa-sync-alt" aria-hidden="true"></i>
       </button>
       <button class="btn-action" onclick="postAction('{% url 'capture_photo' %}', true)">
-        <span class="icon">&#x1f4f7;</span>
+        <i class="fas fa-camera" aria-hidden="true"></i>
       </button>
       <button class="btn-action {% if is_recording %}active{% endif %}" onclick="postAction('{% url 'start_recording' %}')">
-        <span class="icon">&#x23fa;</span>
+        <i class="fas fa-dot-circle" aria-hidden="true"></i>
       </button>
       <button class="btn-action" onclick="postAction('{% url 'stop_recording' %}')">
-        <span class="icon">&#x23f9;</span>
+        <i class="fas fa-stop-circle" aria-hidden="true"></i>
       </button>
       <button class="btn-action" id="open-settings">
-        <span class="icon">&#9881;</span>
+        <i class="fas fa-cog" aria-hidden="true"></i>
       </button>
     </div>
 

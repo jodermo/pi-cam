@@ -2,33 +2,35 @@
 
 {% block title %}Timelapse Gallery{% endblock %}
 
-
 {% block actions %}
 <div class="player-controls">
   <div class="action-group">
-    <button id="play-pause" class="btn-action">Play</button>
+    <button id="play-pause" class="btn-action">
+      <!-- show/hide these via JS depending on state -->
+      <i class="fas fa-play" aria-hidden="true"></i>
+      <i class="fas fa-pause" aria-hidden="true" style="display:none;"></i>
+    </button>
     <label for="speed-number">Speed (ms/frame):</label>
   </div>
   <div class="action-group">
-  <input id="speed-number" type="number" min="25" value="500" class="input-field speed-input" />
-  <input id="speed-slider" type="range" min="25" max="2000" step="50" value="500" class="speed-slider" />
- </div>
+    <input id="speed-number" type="number" min="25" value="500" class="input-field speed-input" />
+    <input id="speed-slider" type="range" min="25" max="2000" step="50" value="500" class="speed-slider" />
+  </div>
 
   <button id="open-tl-settings" class="btn-action">
-    <span class="icon">&#9881;</span>
-    Settings
+    <i class="fas fa-cog" aria-hidden="true"></i>
   </button>
+
   <form method="post" action="{% url 'download_timelapse' %}" id="download-tl-form" style="display:inline;">
     {% csrf_token %}
     <input type="hidden" name="speed_ms" id="download-speed" value="{{ timelapse_speed_ms }}">
     <button type="submit" class="btn-action">
-      <span class="icon">&#x1f4be;</span>
-      Download Video
+      <i class="fas fa-download" aria-hidden="true"></i>
     </button>
   </form>
-
 </div>
 {% endblock %}
+
 
 {% block content %}
 <div class="timelapse-container">

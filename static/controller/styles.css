@@ -283,9 +283,6 @@ input[type="range"]{
   flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm);
-  background: var(--clr-panel);
-  border-top: 1px solid var(--clr-border);
 }
 
 .player-controls  > *{

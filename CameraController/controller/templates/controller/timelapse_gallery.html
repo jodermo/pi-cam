@@ -2,18 +2,7 @@
 
 {% block title %}Timelapse Gallery{% endblock %}
 
-{% block content %}
-<div class="timelapse-container">
 
-  <!-- Viewer Card -->
-  <section class="card timelapse-viewer">
-    <div class="player">
-      <canvas id="timelapse-canvas"></canvas>
-      <div id="frame-timestamp" class="frame-timestamp"></div>
-    </div>
-  </section>
-
-</div>
 {% block actions %}
 <div class="player-controls">
   <div class="action-group">
@@ -40,6 +29,21 @@
 
 </div>
 {% endblock %}
+
+{% block content %}
+<div class="timelapse-container">
+
+  <!-- Viewer Card -->
+  <section class="card timelapse-viewer">
+    <div class="player">
+      <canvas id="timelapse-canvas"></canvas>
+      <div id="frame-timestamp" class="frame-timestamp"></div>
+    </div>
+  </section>
+
+</div>
+
+
 <!-- Timelapse Settings Modal -->
 <div id="timelapse-settings-modal" class="modal" aria-hidden="true">
   <div class="modal-wrapper">

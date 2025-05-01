@@ -1,3 +1,7 @@
+{% extends "controller/base.html" %}
+
+{% block title %}App Settings{% endblock %}
+
 {% block content %}
 <form method="post" id="app-settings-form" class="app-settings-form">
   {% csrf_token %}

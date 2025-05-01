@@ -8,7 +8,7 @@
   <div class="camera-source">
     <form id="camera-form" class="camera-select" method="post" action="{% url 'switch_camera' idx=0 %}">
       {% csrf_token %}
-      <select id="camera-select" name="idx" onchange="updateCameraForm(this.value);">
+      <select id="camera-select" name="idx" onchange="controller.updateCameraForm(this.value);">
         {% for src in camera_list %}
           <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>
             {{ src }}
@@ -79,7 +79,7 @@
               />
               <button
                 class="btn-small"
-                onclick="submitSetting('{{ setting.name }}'); return false;"
+                onclick="controller.submitSetting('{{ setting.name }}'); return false;"
               >Set</button>
             </div>
           {% endfor %}
@@ -89,7 +89,7 @@
               id="id_auto_exposure"
               type="checkbox"
               {% if db_settings.auto_exposure %}checked{% endif %}
-              onchange="submitSetting('auto_exposure', this.checked ? 1 : 0)"
+              onchange="controller.submitSetting('auto_exposure', this.checked ? 1 : 0)"
             />
           </div>
         </div>
@@ -112,23 +112,23 @@
   <!-- Action buttons: restart, snapshot, record, stop, settings -->
   <div class="card navigation-card span-2">
     <div class="navigation-grid">
-      <button class="btn-action" onclick="postAction('{% url 'restart' %}');">
+      <button class="btn-action" onclick="controller.postAction('{% url 'restart' %}');">
         <i class="fas fa-sync-alt"></i>
       </button>
       <button
         class="btn-action"
-        onclick="postAction('{% url 'capture_photo' %}', true);"
+        onclick="controller.postAction('{% url 'capture_photo' %}', true);"
       >
         <i class="fas fa-camera"></i>
       </button>
       <button
         id="start-record"
         class="btn-action {% if is_recording %}active{% endif %}"
-        onclick="postAction('{% url 'start_recording' %}');"
+        onclick="controller.postAction('{% url 'start_recording' %}');"
       >
         <i class="fas fa-dot-circle"></i>
       </button>
-      <button class="btn-action" onclick="postAction('{% url 'stop_recording' %}');">
+      <button class="btn-action" onclick="controller.postAction('{% url 'stop_recording' %}');">
         <i class="fas fa-stop-circle"></i>
       </button>
       <button class="btn-action" id="open-settings">
@@ -141,125 +141,6 @@
 
 {% block scripts %}
 <script>
-// CSRF token
-const csrftoken = '{{ csrf_token }}';
-
-// Modal toggles
-const modal = document.getElementById('settings-modal');
-document.getElementById('open-settings')
-  .addEventListener('click', () => modal.setAttribute('aria-hidden','false'));
-document.getElementById('close-settings')
-  .addEventListener('click', () => modal.setAttribute('aria-hidden','true'));
-modal.querySelector('.modal-backdrop')
-  .addEventListener('click', () => modal.setAttribute('aria-hidden','true'));
-
-// Sync inputs and sliders
-const settings = {{ settings_fields|safe }};
-settings.forEach(({name}) => {
-  const input  = document.getElementById('id_'+name);
-  const slider = document.getElementById('slider_'+name);
-  input .addEventListener('input', () => slider.value = input.value);
-  slider.addEventListener('input', () => input.value  = slider.value);
-});
-
-// Proxy single setting
-function submitSetting(name, value=null) {
-  const val = value !== null
-    ? value
-    : document.getElementById('id_'+name).value;
-  fetch(`{% url 'set_setting' setting='__dummy__' %}`.replace('__dummy__', name), {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': csrftoken,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: `value=${val}`
-  })
-  .then(res => res.json().then(data => ({ ok: res.ok, data })))
-  .then(({ok,data}) => {
-    if (!ok) alert(`Error setting ${name}: ${data.detail||data.error}`);
-  });
-}
-
-// Action proxy (restart, snapshot, record/stop)
-function postAction(url, isPhoto=false) {
-  fetch(url, {
-    method: 'POST',
-    headers: { 'X-CSRFToken': csrftoken }
-  })
-  .then(res => {
-    if (!res.ok) return res.json().then(e => Promise.reject(e));
-    return isPhoto ? res.blob() : res.json();
-  })
-  .then(data => {
-    if (isPhoto) {
-      const blobUrl = URL.createObjectURL(data);
-      window.open(blobUrl);
-    } else {
-      const btn    = document.getElementById('start-record');
-      const status = document.getElementById('recording-status');
-
-      if (url.endsWith('{% url "start_recording" %}')) {
-        btn.classList.add('active');
-        status.innerText = '● Recording…';
-        startRecordingTimer();
-      }
-      else if (url.endsWith('{% url "stop_recording" %}')) {
-        btn.classList.remove('active');
-        status.innerText = '';
-        stopRecordingTimer();
-        if (data.last_video) {
-          document.getElementById('last-video-block').innerHTML =
-            `<a href="${data.last_video}" target="_blank">Last video</a>`;
-        }
-      }
-    }
-  })
-  .catch(err => {
-    alert(err.detail||err.error||'Action failed');
-  });
-}
-
-// --- Live clock ---
-function pad(n){ return n < 10 ? '0'+n : n; }
-function updateClock() {
-  const now = new Date();
-  const hh  = pad(now.getHours()),
-        mm  = pad(now.getMinutes()),
-        ss  = pad(now.getSeconds());
-  document.getElementById('current-time').innerText = `${hh}:${mm}:${ss}`;
-}
-setInterval(updateClock, 1000);
-updateClock();  // initial
-
-// --- Recording timer ---
-let recordStart = null;
-let recordTimer = null;
-
-function startRecordingTimer() {
-  recordStart = Date.now();
-  recordTimer = setInterval(() => {
-    const elapsed = Date.now() - recordStart;
-    const hrs  = Math.floor(elapsed / 3600000);
-    const mins = Math.floor(elapsed / 60000) % 60;
-    const secs = Math.floor(elapsed / 1000) % 60;
-    document.getElementById('recording-duration').innerText =
-      `${hrs}:${pad(mins)}:${pad(secs)}`;
-  }, 500);
-}
-
-function stopRecordingTimer() {
-  clearInterval(recordTimer);
-  recordTimer        = null;
-  recordStart        = null;
-  document.getElementById('recording-duration').innerText = '';
-}
-
-// Camera switch helper
-function updateCameraForm(idx) {
-  const form = document.getElementById('camera-form');
-  form.action = form.action.replace(/switch\/\d+/, 'switch/'+idx);
-  form.submit();
-}
+  controller.initCameraView();
 </script>
 {% endblock %}

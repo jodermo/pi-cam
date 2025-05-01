@@ -177,7 +177,8 @@ def set_setting(request, setting):
     try:
         resp = requests.post(
             f"{svc}{api_root}/settings/{setting}",
-            params={'value': val},
+            json={'value': val},       # ← send JSON, not query params
+            headers={'Content-Type':'application/json'},
             timeout=2,
         )
         resp.raise_for_status()

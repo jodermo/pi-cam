@@ -650,6 +650,7 @@ select:focus {
   max-width: 90%;
   max-height: 90%;
   overflow: auto;
+  z-index: 1000;
 }
 
 @media (min-width: 768px) {

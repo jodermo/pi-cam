@@ -66,19 +66,7 @@ server {
         proxy_set_header   X-Real-IP $remote_addr;
     }
     
-    # Switch audio endpoint
-    location /api/switch-audio/([0-9]+)/?$ {
-        proxy_pass         http://pi-cam-camera:8000/switch-audio/$1/;
-        proxy_set_header   Host $host;
-        proxy_set_header   X-Real-IP $remote_addr;
-    }
 
-    location /switch/([0-9]+)/?$ {
-        proxy_pass         http://pi-cam-camera:8000/switch/$1;
-        proxy_set_header   Host $host;
-        proxy_set_header   X-Real-IP $remote_addr;
-    }
-    
     # Device refresh endpoint
     location = /refresh-devices {
         proxy_pass         http://pi-cam-camera:8000/refresh-devices;

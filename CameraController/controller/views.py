@@ -9,7 +9,7 @@ import tempfile
 import base64
 import requests
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import zipfile
 from django.shortcuts import render, redirect
 from django.http import (
@@ -37,9 +37,11 @@ logger = logging.getLogger(__name__)
 
 API_PREFIX          = os.getenv('CAMERA_API_URL', '/api')
 STREAM_PATH         = f"{API_PREFIX}/stream"
+AUDIO_STREAM_PATH   = f"{API_PREFIX}/stream/audio"
 
 CAMERA_SERVICE_BASE = os.getenv('CAMERA_SERVICE_URL', 'http://pi-cam-camera:8000')
 INTERNAL_STREAM_URL = f"{CAMERA_SERVICE_BASE.rstrip('/')}/api/stream"
+INTERNAL_AUDIO_URL  = f"{CAMERA_SERVICE_BASE.rstrip('/')}/api/stream/audio"
 API_BASE = CAMERA_SERVICE_BASE.rstrip('/')
 
 # Properties to expose in UI
@@ -172,43 +174,82 @@ def camera(request):
     # ——— Recording state ———
     is_recording = _recording_thread is not None and _recording_thread.is_alive()
     last_video_url = None
+    recording_elapsed = None
+    
+    if _recording_start_time and is_recording:
+        # Calculate elapsed time for display
+        elapsed = datetime.now() - _recording_start_time
+        recording_elapsed = str(timedelta(seconds=int(elapsed.total_seconds())))
+    
     if _recording_path and not is_recording:
         rel = os.path.relpath(_recording_path, getattr(settings, 'MEDIA_ROOT', ''))
         rel = rel.replace('\\','/')
         last_video_url = settings.MEDIA_URL.rstrip('/') + '/' + rel
+
+    # ——— Get dynamic camera list from FastAPI ———
+    try:
+        resp = requests.get(f"{API_BASE}/cameras", timeout=3)
+        resp.raise_for_status()
+        camera_data = resp.json()
+        camera_list = camera_data.get('sources', [])
+        active_index = camera_data.get('active_idx', 0)
+    except Exception as e:
+        logger.error(f"Failed to get camera list: {e}")
+        # For older camera service versions, create a basic list
+        raw = os.getenv('CAMERA_LOCATIONS', '/dev/video0')
+        camera_list = [{"id": i, "name": f"Camera {i+1}", "path": loc.strip()} 
+                      for i, loc in enumerate(raw.split(',')) if loc.strip()]
+        active_index = 0
 
     # ——— Audio inputs from FastAPI ———
     try:
         resp = requests.get(f"{API_BASE}/audio-sources", timeout=3)
         resp.raise_for_status()
         audio_data = resp.json()
-        audio_inputs      = audio_data.get('sources', [])
-        active_audio_idx  = audio_data.get('active_idx', 0)
-    except Exception:
-        audio_inputs     = []
+        audio_inputs = audio_data.get('sources', [])
+        active_audio_idx = audio_data.get('active_idx', 0)
+    except Exception as e:
+        logger.error(f"Failed to get audio sources: {e}")
+        # For older camera service versions, create a basic list
+        raw = os.getenv('AUDIO_INPUTS', 'default')
+        audio_inputs = [{"id": i, "name": f"Audio {i+1}", "path": dev.strip()} 
+                       for i, dev in enumerate(raw.split(',')) if dev.strip()]
         active_audio_idx = 0
-
-    raw = os.getenv('CAMERA_LOCATIONS', '/dev/video0')
-    camera_list = [loc.strip() for loc in raw.split(',') if loc.strip()]
 
     settings_list = [
         {'name': k, 'value': db_settings[k]}
         for k in ('brightness','contrast','saturation','hue','gain','exposure')
     ]
+    
     # ——— Render the template ———
     return render(request, 'controller/camera.html', {
         'stream_url': STREAM_PATH,
+        'audio_stream_url': AUDIO_STREAM_PATH,
         'settings_fields': settings_list,
         'settings_json': settings_json,
         'db_settings': db_settings,
-        'camera_list': camera_list if len(camera_list)>1 else None,
-        'active_index': 0,
+        'camera_list': camera_list if len(camera_list) > 1 else None,
+        'active_index': active_index,
         'is_recording': is_recording,
         'last_video_url': last_video_url,
         'recording_start_time': _recording_start_time,
+        'recording_elapsed': recording_elapsed,
         'audio_inputs': audio_inputs,
         'active_audio_idx': active_audio_idx,
     })
+
+@login_required
+@require_POST
+def refresh_devices(request):
+    """
+    Force refresh of device lists on the FastAPI service.
+    """
+    try:
+        resp = requests.post(f"{API_BASE}/refresh-devices", timeout=5)
+        resp.raise_for_status()
+        return JsonResponse(resp.json())
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=502)
 
 @login_required
 @require_POST
@@ -306,7 +347,7 @@ def capture_photo(request):
 @login_required
 @require_POST
 def start_recording(request):
-    global _av_recorder
+    global _av_recorder, _recording_start_time
 
     # if an old recorder exists, only refuse if its FFmpeg is truly still running
     if _av_recorder:
@@ -349,14 +390,25 @@ def start_recording(request):
         output_path=outpath
     )
     _av_recorder.start()
+    
+    # Set recording start time for timer display
+    _recording_start_time = datetime.now()
 
-    return JsonResponse({'status': 'started'})
+    # Calculate relative URL for the video
+    rel = os.path.relpath(outpath, settings.MEDIA_ROOT).replace('\\', '/')
+    url = settings.MEDIA_URL.rstrip('/') + '/' + rel
+
+    return JsonResponse({
+        'status': 'started',
+        'recording_path': outpath,
+        'url': url
+    })
 
 
 @login_required
 @require_POST
 def stop_recording(request):
-    global _av_recorder
+    global _av_recorder, _recording_start_time
 
     if not _av_recorder:
         return JsonResponse({'error': 'Not recording'}, status=400)
@@ -371,6 +423,7 @@ def stop_recording(request):
         _av_recorder.join()
 
     _av_recorder = None
+    _recording_start_time = None
 
     # compute public URL
     rel = os.path.relpath(outpath, settings.MEDIA_ROOT).replace('\\', '/')
@@ -398,12 +451,19 @@ def camera_frame(request):
 
 
 @login_required
+@require_POST
 def switch_camera(request, idx):
     if request.method!='POST': return HttpResponseBadRequest('POST only')
-    try: idx=int(idx)
+    try: idx = int(idx)
     except: return HttpResponseBadRequest('Bad index')
-    # TODO: persist or inform service
-    return JsonResponse({'status':'switched','active_idx':idx})
+    
+    # Send request to the camera service to switch camera
+    try:
+        resp = requests.post(f"{API_BASE}/switch/{idx}", timeout=3)
+        resp.raise_for_status()
+        return JsonResponse(resp.json())
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to switch camera: {str(e)}'}, status=502)
 
 
 @login_required
@@ -433,12 +493,12 @@ def health(request):
         try:
             camera_data = response.json()
         except ValueError:
-            camera_data = None  # Antwort war kein JSON
+            camera_data = None  # Response was not JSON
 
         if response.status_code == 200 and camera_data:
             return JsonResponse(camera_data)
 
-        # Fehlerhafte Antwort, versuche JSON zu extrahieren
+        # Error response, try to extract JSON
         try:
             error_data = response.json()
         except ValueError:
@@ -482,7 +542,7 @@ def camera_event(request):
 def timelapse_gallery(request):
     """Display list of timelapse images and handle settings form."""
 
-    # Correct: load AppConfigSettings
+    # Load AppConfigSettings
     config, _ = AppConfigSettings.objects.get_or_create(pk=1)
 
     if request.method == 'POST':
@@ -507,10 +567,14 @@ def timelapse_gallery(request):
         for img in images
     ]
 
+    # Pass empty settings_json for consistent template context
+    settings_json = '[]'
+
     return render(request, 'controller/timelapse_gallery.html', {
         'images': images_urls,
         'form': form,
-        'settings_json': []
+        'settings_json': settings_json,
+        'timelapse_speed_ms': 500,  # Default speed
     })
 
 @login_required
@@ -534,11 +598,14 @@ def media_browser(request):
     videos    = list_urls(videos_dir, ('.mp4',),               'videos')
     timelapse = list_urls(tl_dir,    ('.jpg','.jpeg','.png'), tl_folder)
 
+    # Pass empty settings_json for consistent template context
+    settings_json = '[]'
+
     return render(request, 'controller/media_browser.html', {
         'photos':    photos,
         'videos':    videos,
         'timelapses': timelapse,
-        'settings_json': []
+        'settings_json': settings_json
     })
 
 @login_required
@@ -621,7 +688,6 @@ def timelapse_api(request):
     return JsonResponse(data, safe=False)
 
 
-
 @login_required
 @csrf_exempt
 def delete_photo(request, filename):
@@ -673,7 +739,6 @@ def delete_timelapse(request, filename):
         return JsonResponse({'status': 'deleted', 'filename': filename})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
 
 @login_required
 @require_POST
@@ -889,7 +954,7 @@ def audio_sources(request):
 @require_POST
 def switch_audio(request, idx):
     """
-    Instruct the FastAPI service to switch to AUDIO_INPUTS[idx].
+    Instruct the FastAPI service to switch to a different audio input.
     """
     try:
         resp = requests.post(f"{API_BASE}/switch-audio/{idx}", timeout=5)

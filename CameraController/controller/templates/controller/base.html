@@ -13,25 +13,39 @@
 
   
   <script>
-
-    const settings = {{ settings_json|safe }};
-  
+    // Global configuration for camera controller
     window.CameraConfig = {
       csrfToken: '{{ csrf_token }}',
-      urls: {
-        restart:        '{% url "restart" %}',
-        capturePhoto:   '{% url "capture_photo" %}',
-        startRecording: '{% url "start_recording" %}',
-        stopRecording:  '{% url "stop_recording" %}',
-        setSetting:     '{% url "set_setting" setting="__dummy__" %}'
-      },
-      api: {
-        photosList:    '{% url "api_photo_list" %}',
-        videosList:    '{% url "api_video_list" %}',
-        timelapseList: '{% url "api_timelapse_list" %}'
-      },
-      settings: settings,
-      recording: {{ is_recording|yesno:"true,false" }}
+      streamUrl: '{{ stream_url|default:"/api/stream" }}',
+      audioStreamUrl: '{{ audio_stream_url|default:"/api/stream/audio" }}',
+      settings: {{ settings_json|safe }},
+      recording: {{ is_recording|yesno:"true,false" }},
+      cameraList: {% if camera_list %}{{ camera_list|safe }}{% else %}[]{% endif %},
+      audioInputs: {% if audio_inputs %}{{ audio_inputs|safe }}{% else %}[]{% endif %},
+      activeCamera: {{ active_index|default:0 }},
+      activeAudio: {{ active_audio_idx|default:0 }},
+      endpoints: {
+        // Camera control endpoints
+        setSetting: '{% url "set_setting" setting="__dummy__" %}',
+        capture: '{% url "capture_photo" %}',
+        startRecord: '{% url "start_recording" %}',
+        stopRecord: '{% url "stop_recording" %}',
+        switchCamera: '{% url "switch_camera" idx=0 %}',
+        switchAudio: '{% url "api_switch_audio" idx=0 %}',
+        restart: '{% url "restart" %}',
+        refreshDevices: '{% url "refresh_devices" %}',
+        
+        // Media management endpoints
+        photosList: '{% url "api_photo_list" %}',
+        videosList: '{% url "api_video_list" %}',
+        timelapseList: '{% url "api_timelapse_list" %}',
+        downloadPhotos: '{% url "download_all_photos" %}',
+        downloadVideos: '{% url "download_all_videos" %}',
+        downloadTimelapse: '{% url "download_timelapse" %}',
+        downloadSelectedPhotos: '{% url "download_selected_photos" %}',
+        downloadSelectedVideos: '{% url "download_selected_videos" %}',
+        downloadSelectedTimelapse: '{% url "download_selected_timelapse" %}',
+      }
     };
   </script>
   
@@ -56,22 +70,23 @@
         </a>
       </nav>
     </header>
+    
+    <!-- Notification container for dynamic alerts -->
+    <div id="notification-container" class="notification-container"></div>
+    
     {% block actions %}{% endblock %}
     <main class="content">
       {% block content %}{% endblock %}
     </main>
     {% block navigation %}{% endblock %}
   </div>
+  
+  <!-- Load JavaScript controllers in the correct order -->
   <script src="{% static 'controller/cameraController.js' %}"></script>
-  <script>
-    let controller;
-    document.addEventListener('DOMContentLoaded', () => {
-      controller =  new CameraController(window.CameraConfig);
-      controller.initCameraView();
-      controller.initMediaBrowser();
-      controller.initTimelapseGallery();
-    });
-  </script>
+  <script src="{% static 'controller/mediaBrowserController.js' %}"></script>
+  <script src="{% static 'controller/timelapseController.js' %}"></script>
+  <script src="{% static 'controller/mainController.js' %}"></script>
+  
   {% block scripts %}{% endblock %}
 </body>
 </html>

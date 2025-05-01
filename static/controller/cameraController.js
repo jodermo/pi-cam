@@ -1,337 +1,563 @@
+/**
+ * CameraController.js
+ * 
+ * A comprehensive JavaScript class to handle camera and audio streaming,
+ * camera settings, recording, and device management for the camera application.
+ */
 class CameraController {
-    constructor(config) {
-      // Configuration from template: CSRF, endpoints, API URLs, settings
-      this.config = config ||  window.CameraConfig;
-      this.csrfToken = config.csrfToken;
-      this.recordStart = null;
-      this.recordTimer = null;
-        console.log('CameraController', config,  window.CameraConfig);
-     
+    /**
+     * Initialize the CameraController with configuration options
+     * @param {Object} options - Configuration options
+     * @param {string} options.videoElementId - ID of the video element for displaying the camera stream
+     * @param {string} options.audioElementId - ID of the audio element for playing audio
+     * @param {string} options.streamUrl - URL for the video stream
+     * @param {string} options.audioStreamUrl - URL for the audio stream
+     * @param {Object} options.endpoints - API endpoint URLs
+     * @param {Array} options.settingsFields - Camera settings fields available for adjustment
+     */
+    constructor(options) {
+      // Required parameters
+      this.videoElementId = options.videoElementId || 'camera-stream';
+      this.audioElementId = options.audioElementId || 'audio-stream';
+      this.streamUrl = options.streamUrl || '/api/stream';
+      this.audioStreamUrl = options.audioStreamUrl || '/api/stream/audio';
+      
+      // API endpoints
+      this.endpoints = {
+        setSetting: '/set', // Base URL, will append /{setting}/ in the method
+        capture: '/capture/',
+        startRecord: '/record/start/',
+        stopRecord: '/record/stop/',
+        cameraFrame: '/camera-frame/',
+        switchCamera: '/switch/', // Will append /{idx}/
+        switchAudio: '/api/switch-audio/', // Will append /{idx}/
+        restart: '/restart/',
+        refreshDevices: '/refresh-devices/',
+        audioSources: '/api/audio-sources/',
+        ...options.endpoints || {}
+      };
+      
+      // Settings
+      this.settingsFields = options.settingsFields || [
+        'brightness', 'contrast', 'saturation', 'hue', 'gain', 'exposure'
+      ];
+      
+      // State
+      this.isRecording = false;
+      this.recordingStartTime = null;
+      this.recordingTimer = null;
+      this.currentCamera = 0;
+      this.currentAudio = 0;
+      this.isMuted = true;
+      
+      // Stream elements
+      this.videoElement = null;
+      this.audioElement = null;
+      
+      // Callbacks
+      this.onCaptureComplete = options.onCaptureComplete || null;
+      this.onRecordingStarted = options.onRecordingStarted || null;
+      this.onRecordingStopped = options.onRecordingStopped || null;
+      this.onSettingChanged = options.onSettingChanged || null;
+      this.onCameraSwitch = options.onCameraSwitch || null;
+      this.onAudioSwitch = options.onAudioSwitch || null;
+      this.onError = options.onError || this._defaultErrorHandler;
+      
+      // Initialize
+      this._init();
     }
-  
-    // =========== Camera Controls ===========
-    initCameraView() {
-      // Settings modal
-      const modal = document.getElementById('settings-modal');
-      document.getElementById('open-settings')?.addEventListener('click', () => modal.setAttribute('aria-hidden','false'));
-      document.getElementById('close-settings')?.addEventListener('click', () => modal.setAttribute('aria-hidden','true'));
-      if(modal){
-        modal.querySelector('.modal-backdrop')?.addEventListener('click', () => modal.setAttribute('aria-hidden','true'));
+    
+    /**
+     * Initialize the controller, setup stream elements
+     * @private
+     */
+    _init() {
+      // Get stream elements
+      this.videoElement = document.getElementById(this.videoElementId);
+      this.audioElement = document.getElementById(this.audioElementId);
+      
+      if (!this.videoElement) {
+        console.error(`Video element with ID ${this.videoElementId} not found`);
+        return;
       }
-  
-      // Sync sliders and inputs, auto-submit on change
-      (this.config.settings || []).forEach(({ name }) => {
-        const input = document.getElementById(`id_${name}`);
-        const slider = document.getElementById(`slider_${name}`);
-        if (!input || !slider) return;
-        input.addEventListener('input', () => slider.value = input.value);
-        slider.addEventListener('input', () => input.value = slider.value);
-        input.addEventListener('change', () => this.submitSetting(name));
-      });
-  
-      // Snapshot button
-      document.getElementById('take-photo')?.addEventListener('click', () =>
-        this.postAction('takePhoto', true)
-      );
-      // Recording start/stop
-      document.getElementById('start-record')?.addEventListener('click', () =>
-        this.postAction('startRecording', false)
-      );
-      document.getElementById('stop-record')?.addEventListener('click', () =>
-        this.postAction('stopRecording', false)
-      );
-  
-      // Live clock
-      this.updateClock();
-      this.initAudioControls();
-      setInterval(() => this.updateClock(), 1000);
+      
+      if (!this.audioElement) {
+        console.error(`Audio element with ID ${this.audioElementId} not found`);
+        // Create audio element if it doesn't exist
+        this.audioElement = document.createElement('audio');
+        this.audioElement.id = this.audioElementId;
+        this.audioElement.style.display = 'none';
+        document.body.appendChild(this.audioElement);
+      }
+      
+      // Setup video stream
+      this.videoElement.src = this.streamUrl;
+      
+      // Setup audio stream
+      this.audioElement.src = this.audioStreamUrl;
+      this.audioElement.preload = 'auto';
+      
+      // Setup event handlers
+      this._setupEventHandlers();
     }
-  
-    // =========== Media Browser ===========
-    initMediaBrowser() {
-      // Tab switching
-      document.querySelectorAll('.navigation-grid .tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          document.querySelectorAll('.navigation-grid .tab').forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          const target = tab.dataset.target;
-          document.querySelectorAll('.tab-content').forEach(sec => {
-            const match = sec.id === target || sec.id === `${target}Actions`;
-            sec.hidden = !match;
-            sec.classList.toggle('active', match);
-          });
-        });
+    
+    /**
+     * Setup event handlers for stream elements
+     * @private
+     */
+    _setupEventHandlers() {
+      // Video stream error handling
+      this.videoElement.addEventListener('error', (event) => {
+        this.onError('Video stream error: ' + event.target.error.message);
       });
-  
-      // Batch operations for each media type
-      this._setupBatch('photos',   this.config.api.photosList);
-      this._setupBatch('videos',   this.config.api.videosList);
-      this._setupBatch('tl',       this.config.api.timelapseList);
-  
-      // Preview modal
-      const modal = document.getElementById('preview-modal');
-      const imgEl = document.getElementById('preview-img');
-      const videoEl = document.getElementById('preview-video');
-      const closeBtn = document.getElementById('preview-close');
-  
-      document.querySelectorAll('.preview-item').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const url = btn.dataset.url;
-          const isVid = /\.(mp4|webm|ogg)$/i.test(url);
-          if (isVid) {
-            imgEl.style.display = 'none';
-            videoEl.src = url;
-            videoEl.style.display = 'block';
+      
+      // Audio stream error handling
+      this.audioElement.addEventListener('error', (event) => {
+        console.warn('Audio stream error: ' + (event.target.error ? event.target.error.message : 'unknown'));
+        // Don't trigger main error handler for audio errors as they are non-critical
+      });
+      
+      // Setup audio stream events
+      this.audioElement.addEventListener('canplay', () => {
+        console.log('Audio stream ready');
+      });
+    }
+    
+    /**
+     * Default error handler
+     * @private
+     * @param {string} message - Error message
+     */
+    _defaultErrorHandler(message) {
+      console.error('CameraController error:', message);
+      alert('Camera Error: ' + message);
+    }
+    
+    /**
+     * Send an API request to the server
+     * @private
+     * @param {string} endpoint - API endpoint
+     * @param {string} method - HTTP method (GET, POST, etc.)
+     * @param {Object} data - Data to send with request
+     * @returns {Promise} - Promise that resolves with response
+     */
+    async _apiRequest(endpoint, method = 'GET', data = null) {
+      try {
+        const options = {
+          method: method,
+          headers: {
+            'X-CSRFToken': this._getCsrfToken(),
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        };
+        
+        // Add request body if needed
+        if (data && (method === 'POST' || method === 'PUT')) {
+          if (typeof data === 'object') {
+            // Convert object to form data
+            const formData = new URLSearchParams();
+            for (const key in data) {
+              formData.append(key, data[key]);
+            }
+            options.body = formData;
           } else {
-            videoEl.style.display = 'none';
-            imgEl.src = url;
-            imgEl.style.display = 'block';
-          }
-          modal.style.display = 'block';
-        });
-      });
-  
-      const closeModal = () => {
-        modal.style.display = 'none';
-        videoEl.pause();
-      };
-      closeBtn?.addEventListener('click', closeModal);
-      modal?.addEventListener('click', e => e.target === modal && closeModal());
-    }
-  
-    // =========== Batch Helper ===========
-    _setupBatch(prefix, apiUrl) {
-      const gallery = document.getElementById(`${prefix}-gallery`);
-      if (!gallery) return;
-      const deleteSelBtn    = document.getElementById(`${prefix}-delete-selected`);
-      const downloadForm    = document.getElementById(`${prefix}-download-selected-form`);
-      const downloadSelBtn  = document.getElementById(`${prefix}-download-selected`);
-      const deleteAllBtn    = document.getElementById(`${prefix}-delete-all`);
-      const selectAllBtn    = document.getElementById(`${prefix}-select-all`);
-      const unselectAllBtn  = document.getElementById(`${prefix}-unselect-all`);
-      const boxes           = Array.from(gallery.querySelectorAll('.select-item'));
-  
-      // Layout toggles
-      document.getElementById(`${prefix}-grid`)?.addEventListener('click', () => {
-        gallery.classList.replace('list-view','grid-view');
-        document.getElementById(`${prefix}-grid`).classList.add('active');
-        document.getElementById(`${prefix}-list`).classList.remove('active');
-      });
-      document.getElementById(`${prefix}-list`)?.addEventListener('click', () => {
-        gallery.classList.replace('grid-view','list-view');
-        document.getElementById(`${prefix}-list`).classList.add('active');
-        document.getElementById(`${prefix}-grid`).classList.remove('active');
-      });
-  
-      // Select/unselect all
-      selectAllBtn?.addEventListener('click', () => { boxes.forEach(b => b.checked=true); toggleBtns(); });
-      unselectAllBtn?.addEventListener('click', () => { boxes.forEach(b => b.checked=false); toggleBtns(); });
-      boxes.forEach(b => b.addEventListener('change', toggleBtns));
-      function toggleBtns() {
-        const any = boxes.some(b => b.checked);
-        deleteSelBtn.disabled = !any;
-        downloadSelBtn.disabled = !any;
-        deleteSelBtn.classList.toggle('disabled', !any);
-        downloadSelBtn.classList.toggle('disabled', !any);
-      }
-  
-      // Per-item delete
-      gallery.querySelectorAll('.delete-item').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (!confirm('Delete this item?')) return;
-          const res = await fetch(btn.dataset.url, {
-            method:'DELETE', credentials:'same-origin', headers:{ 'X-CSRFToken': this.csrfToken }
-          });
-          if (res.ok) btn.closest('.gallery-item').remove();
-          else alert('Error deleting item');
-        });
-      });
-  
-      // Batch delete selected
-      deleteSelBtn?.addEventListener('click', async () => {
-        if (!confirm('Delete selected?')) return;
-        await Promise.all(
-          boxes.filter(b=>b.checked).map(async b=>{
-            const item = b.closest('.gallery-item');
-            const r = await fetch(item.querySelector('.delete-item').dataset.url, {
-              method:'DELETE', credentials:'same-origin', headers:{ 'X-CSRFToken': this.csrfToken }
-            });
-            if (r.ok) item.remove();
-          })
-        );
-        toggleBtns();
-      });
-  
-      // Batch download selected
-      downloadSelBtn?.addEventListener('click', () => {
-        const names = boxes.filter(b=>b.checked).map(b=>b.closest('.gallery-item').dataset.filename);
-        if (!names.length) return;
-        const container = downloadForm.querySelector('.selected-inputs');
-        container.innerHTML = '';
-        names.forEach(n=>{
-          const inp = document.createElement('input'); inp.type='hidden'; inp.name='filenames'; inp.value=n;
-          container.appendChild(inp);
-        });
-        downloadForm.submit();
-      });
-  
-      // Batch delete all
-      deleteAllBtn?.addEventListener('click', async () => {
-        if (!confirm('Delete all?')) return;
-        const res = await fetch(apiUrl, {
-          method:'DELETE', credentials:'same-origin', headers:{ 'X-CSRFToken': this.csrfToken }
-        });
-        if (res.ok) gallery.innerHTML='';
-        else alert('Failed to delete all');
-      });
-    }
-  
-    // =========== Timelapse Gallery ===========
-    initTimelapseGallery() {
-      const canvas = document.getElementById('timelapse-canvas');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const thumbs = Array.from(document.querySelectorAll('.thumbnail-container .thumb'));
-      const urls = thumbs.map(t=>t.dataset.src);
-      const tsEl = document.getElementById('frame-timestamp');
-      const playBtn = document.getElementById('play-pause');
-      const speedNum = document.getElementById('speed-number');
-      const speedSlider = document.getElementById('speed-slider');
-      let idx=0, timer=null;
-  
-      const resizeCanvas = () => { canvas.width=1920; canvas.height=1080; };
-      const formatTime = src => {
-        const m= src ? src.match(/(\d{4})(\d{2})(\d{2})[_-](\d{2})(\d{2})(\d{2})/) : 0;
-        if(!m) return '';
-        const [y,mo,d,h,mi,s] = m.slice(1).map(Number);
-        return new Date(y,mo-1,d,h,mi,s).toLocaleString();
-      };
-      const draw = i => {
-        const img=new Image();
-        img.onload=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width,canvas.height); };
-        img.src=urls[i];
-        tsEl.textContent=formatTime(urls[i]);
-        thumbs.forEach(t=>t.classList.toggle('active',+t.dataset.index===i));
-      };
-      const scrollTo = ()=>thumbs[idx]?.scrollIntoView({behavior:'smooth',inline:'center'});
-      const play = ()=>{ timer=setInterval(()=>{ idx=(idx+1)%urls.length; draw(idx); scrollTo(); },+speedNum.value); playBtn.textContent='Pause'; };
-      const pause = ()=>{ clearInterval(timer); timer=null; playBtn.textContent='Play'; };
-      playBtn.onclick = ()=> timer? pause(): play();
-      speedNum.oninput = ()=>{ speedSlider.value=speedNum.value; if(timer){ pause(); play(); }};
-      speedSlider.oninput = ()=>{ speedNum.value=speedSlider.value; if(timer){ pause(); play(); }};
-      thumbs.forEach(t=>t.onclick=()=>{ idx=+t.dataset.index; draw(idx); pause(); scrollTo(); });
-      window.addEventListener('resize', resizeCanvas);
-      resizeCanvas(); draw(0);
-  
-      // Timelapse settings modal
-      const tlModal=document.getElementById('timelapse-settings-modal');
-      document.getElementById('open-tl-settings')?.addEventListener('click',()=>tlModal.setAttribute('aria-hidden','false'));
-      document.getElementById('close-tl-settings')?.addEventListener('click',()=>tlModal.setAttribute('aria-hidden','true'));
-      tlModal.querySelector('.modal-backdrop')?.addEventListener('click',()=>tlModal.setAttribute('aria-hidden','true'));
-    }
-  
-    // =========== Server Interactions ===========
-    submitSetting(name, value=null) {
-      const val = value!==null ? value : document.getElementById(`id_${name}`).value;
-      const url = this.config.urls.setSetting.replace('__dummy__', name);
-      fetch(url, {
-        method:'POST', credentials:'same-origin',
-        headers:{ 'X-CSRFToken': this.csrfToken, 'Content-Type':'application/x-www-form-urlencoded' },
-        body:`value=${encodeURIComponent(val)}`
-      })
-      .then(res=>res.json().then(data=>({ok:res.ok,data})))
-      .then(({ok,data})=>{ if(!ok) alert(`Error setting ${name}: ${data.detail||data.error}`); })
-      .catch(err=>alert(`Network error: ${err}`));
-      console.log('submitSetting',url, name, value);
-    }
-  
-    postAction(actionKey, isPhoto=false) {
-      // Allow actionKey to be either a configured key or a direct URL
-      const url = this.config.urls[actionKey] || actionKey;
-      fetch(url, {
-        method:'POST', credentials:'same-origin', headers:{ 'X-CSRFToken': this.csrfToken }
-      })
-      .then(res=>{
-        if(!res.ok) return res.json().then(e=>Promise.reject(e));
-        return isPhoto ? res.blob() : res.json();
-      })
-      .then(data=>{
-        if(isPhoto) {
-          const blobUrl = URL.createObjectURL(data);
-          window.open(blobUrl, '_blank');
-        } else {
-          const btn = document.getElementById('start-record');
-          const status = document.getElementById('recording-status');
-          if(actionKey==='startRecording') {
-            btn.classList.add('active'); status.innerText='● Recording…'; this.startRecordingTimer();
-          } else if(actionKey==='stopRecording') {
-            btn.classList.remove('active'); status.innerText=''; this.stopRecordingTimer();
-            if(data.last_video) document.getElementById('last-video-block').innerHTML=`<a href="${data.last_video}" target="_blank">Last video</a>`;
+            options.body = data;
           }
         }
-      })
-      .catch(err=>alert(err.detail||err.error||'Action failed'));
+        
+        const response = await fetch(endpoint, options);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        this.onError(`API request failed: ${error.message}`);
+        throw error;
+      }
     }
-  
-    pad(n) { return n<10? '0'+n : ''+n; }
-  
-    updateClock() {
+    
+    /**
+     * Get CSRF token from cookies
+     * @private
+     * @returns {string} - CSRF token
+     */
+    _getCsrfToken() {
+      const name = 'csrftoken';
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    
+    /**
+     * Format time duration in MM:SS format
+     * @private
+     * @param {number} seconds - Time in seconds
+     * @returns {string} - Formatted time string
+     */
+    _formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    /**
+     * Update recording timer display
+     * @private
+     * @param {HTMLElement} element - Element to update
+     */
+    _updateRecordingTimer(element) {
+      if (!element || !this.recordingStartTime) return;
+      
       const now = new Date();
-      const hh=this.pad(now.getHours()), mm=this.pad(now.getMinutes()), ss=this.pad(now.getSeconds());
-      const currentTimeElm = document.getElementById('current-time');
-      if(currentTimeElm){
-        document.getElementById('current-time').innerText = `${hh}:${mm}:${ss}`;
+      const elapsedSeconds = Math.floor((now - this.recordingStartTime) / 1000);
+      element.textContent = this._formatTime(elapsedSeconds);
+    }
+    
+    /**
+     * Toggle audio playback (mute/unmute)
+     * @returns {boolean} - New mute state
+     */
+    toggleAudio() {
+      this.isMuted = !this.isMuted;
+      this.audioElement.muted = this.isMuted;
+      
+      if (!this.isMuted && this.audioElement.paused) {
+        // If unmuting and audio is paused, try to play
+        this.audioElement.play().catch(error => {
+          console.warn('Could not play audio:', error);
+        });
+      }
+      
+      return this.isMuted;
+    }
+    
+    /**
+     * Start or resume audio playback
+     */
+    playAudio() {
+      if (this.audioElement) {
+        this.audioElement.play().catch(error => {
+          console.warn('Could not play audio:', error);
+        });
+        this.isMuted = this.audioElement.muted;
       }
     }
-  
-    startRecordingTimer() {
-      this.recordStart = Date.now();
-      this.recordTimer = setInterval(()=>{
-        const elapsed = Date.now() - this.recordStart;
-        const hrs=Math.floor(elapsed/3600000);
-        const mins=Math.floor(elapsed/60000)%60;
-        const secs=Math.floor(elapsed/1000)%60;
-        document.getElementById('recording-duration').innerText = `${hrs}:${this.pad(mins)}:${this.pad(secs)}`;
-      },500);
+    
+    /**
+     * Pause audio playback
+     */
+    pauseAudio() {
+      if (this.audioElement) {
+        this.audioElement.pause();
+      }
     }
-  
-    stopRecordingTimer() {
-      clearInterval(this.recordTimer);
-      this.recordTimer=null; this.recordStart=null;
-      document.getElementById('recording-duration').innerText='';
-    }
-  
-    updateCameraForm(idx) {
-      const form = document.getElementById('camera-form');
-      form.action = form.action.replace(/switch\/\d+/, `switch/${idx}`);
-      form.submit();
-    }
-
-    initAudioControls() {
-        const sel = document.getElementById('audio-select');
-        const btn = document.getElementById('audio-switch-btn');
-        const aud = document.getElementById('live-audio');
-        if(btn && sel && aud){
-            btn.addEventListener('click', async () => {
-                const idx = sel.value;
-                const res = await fetch(`/api/switch-audio/${idx}/`, {
-                  method: 'POST',
-                  credentials: 'same-origin',
-                  headers: { 'X-CSRFToken': this.csrfToken }
-                });
-                if (res.ok) {
-                  // reload the audio element to pick up the new device
-                  aud.load();
-                } else {
-                  alert('Failed to switch audio');
-                }
-              });
+    
+    /**
+     * Capture a photo from the current camera stream
+     * @returns {Promise} - Promise that resolves with the response
+     */
+    async capturePhoto() {
+      try {
+        // Send request to capture endpoint
+        const response = await this._apiRequest(this.endpoints.capture, 'GET');
+        
+        // Call the callback if provided
+        if (this.onCaptureComplete) {
+          this.onCaptureComplete(response);
         }
-
+        
+        return response;
+      } catch (error) {
+        this.onError('Failed to capture photo: ' + error.message);
+        throw error;
       }
+    }
+    
+    /**
+     * Start recording video with audio
+     * @param {Object} options - Recording options
+     * @param {number} options.audioIdx - Audio device index to use
+     * @param {HTMLElement} options.timerElement - Element to display recording time
+     * @returns {Promise} - Promise that resolves when recording starts
+     */
+    async startRecording(options = {}) {
+      if (this.isRecording) {
+        console.warn('Recording already in progress');
+        return;
+      }
+      
+      try {
+        const data = {};
+        if (options.audioIdx !== undefined) {
+          data.audio_idx = options.audioIdx;
+        }
+        
+        // Send request to start recording
+        const response = await this._apiRequest(this.endpoints.startRecord, 'POST', data);
+        
+        this.isRecording = true;
+        this.recordingStartTime = new Date();
+        
+        // Start timer if timerElement is provided
+        if (options.timerElement) {
+          this._updateRecordingTimer(options.timerElement);
+          this.recordingTimer = setInterval(() => {
+            this._updateRecordingTimer(options.timerElement);
+          }, 1000);
+        }
+        
+        // Call the callback if provided
+        if (this.onRecordingStarted) {
+          this.onRecordingStarted(response);
+        }
+        
+        return response;
+      } catch (error) {
+        this.onError('Failed to start recording: ' + error.message);
+        throw error;
+      }
+    }
+    
+    /**
+     * Stop current recording
+     * @returns {Promise} - Promise that resolves with the recorded video info
+     */
+    async stopRecording() {
+      if (!this.isRecording) {
+        console.warn('No recording in progress');
+        return;
+      }
+      
+      try {
+        // Send request to stop recording
+        const response = await this._apiRequest(this.endpoints.stopRecord, 'POST');
+        
+        this.isRecording = false;
+        this.recordingStartTime = null;
+        
+        // Clear timer if it exists
+        if (this.recordingTimer) {
+          clearInterval(this.recordingTimer);
+          this.recordingTimer = null;
+        }
+        
+        // Call the callback if provided
+        if (this.onRecordingStopped) {
+          this.onRecordingStopped(response);
+        }
+        
+        return response;
+      } catch (error) {
+        this.onError('Failed to stop recording: ' + error.message);
+        throw error;
+      }
+    }
+    
+    /**
+     * Change a camera setting
+     * @param {string} setting - Setting name
+     * @param {number|boolean} value - Setting value
+     * @returns {Promise} - Promise that resolves with the response
+     */
+    async changeSetting(setting, value) {
+      if (!this.settingsFields.includes(setting) && setting !== 'auto_exposure') {
+        console.warn(`Unknown camera setting: ${setting}`);
+        return;
+      }
+      
+      try {
+        // Send request to change setting
+        const endpoint = `${this.endpoints.setSetting}/${setting}/`;
+        const response = await this._apiRequest(endpoint, 'POST', { value: value });
+        
+        // Call the callback if provided
+        if (this.onSettingChanged) {
+          this.onSettingChanged(setting, value, response);
+        }
+        
+        return response;
+      } catch (error) {
+        this.onError(`Failed to change setting ${setting}: ${error.message}`);
+        throw error;
+      }
+    }
+    
+    /**
+     * Switch to a different camera
+     * @param {number} cameraIdx - Camera index to switch to
+     * @returns {Promise} - Promise that resolves with the response
+     */
+    async switchCamera(cameraIdx) {
+      try {
+        // Send request to switch camera
+        const endpoint = `${this.endpoints.switchCamera}${cameraIdx}/`;
+        const response = await this._apiRequest(endpoint, 'POST');
+        
+        this.currentCamera = cameraIdx;
+        
+        // Call the callback if provided
+        if (this.onCameraSwitch) {
+          this.onCameraSwitch(cameraIdx, response);
+        }
+        
+        return response;
+      } catch (error) {
+        this.onError(`Failed to switch camera: ${error.message}`);
+        throw error;
+      }
+    }
+    
+    /**
+     * Switch to a different audio input device
+     * @param {number} audioIdx - Audio device index to switch to
+     * @returns {Promise} - Promise that resolves with the response
+     */
+    async switchAudio(audioIdx) {
+      try {
+        // Send request to switch audio
+        const endpoint = `${this.endpoints.switchAudio}${audioIdx}/`;
+        const response = await this._apiRequest(endpoint, 'POST');
+        
+        this.currentAudio = audioIdx;
+        
+        // Reload the audio stream
+        this.audioElement.load();
+        
+        // Call the callback if provided
+        if (this.onAudioSwitch) {
+          this.onAudioSwitch(audioIdx, response);
+        }
+        
+        return response;
+      } catch (error) {
+        this.onError(`Failed to switch audio: ${error.message}`);
+        throw error;
+      }
+    }
+    
+    /**
+     * Restart the camera service
+     * @returns {Promise} - Promise that resolves with the response
+     */
+    async restartCamera() {
+      try {
+        // Send request to restart camera
+        const response = await this._apiRequest(this.endpoints.restart, 'POST');
+        return response;
+      } catch (error) {
+        this.onError(`Failed to restart camera: ${error.message}`);
+        throw error;
+      }
+    }
+    
+    /**
+     * Refresh the list of available devices
+     * @returns {Promise} - Promise that resolves with the available devices
+     */
+    async refreshDevices() {
+      try {
+        // Send request to refresh devices
+        const response = await this._apiRequest(this.endpoints.refreshDevices, 'POST');
+        return response;
+      } catch (error) {
+        this.onError(`Failed to refresh devices: ${error.message}`);
+        throw error;
+      }
+    }
+    
+    /**
+     * Get the list of available audio sources
+     * @returns {Promise} - Promise that resolves with the available audio sources
+     */
+    async getAudioSources() {
+      try {
+        // Send request to get audio sources
+        const response = await this._apiRequest(this.endpoints.audioSources, 'GET');
+        return response;
+      } catch (error) {
+        this.onError(`Failed to get audio sources: ${error.message}`);
+        throw error;
+      }
+    }
+    
+    /**
+     * Get a single frame from the camera as a base64 encoded JPEG
+     * @returns {Promise<string>} - Promise that resolves with the base64 encoded image
+     */
+    async getCameraFrame() {
+      try {
+        // Send request to get a camera frame
+        const response = await this._apiRequest(this.endpoints.cameraFrame, 'GET');
+        return response.frame; // base64 encoded image
+      } catch (error) {
+        this.onError(`Failed to get camera frame: ${error.message}`);
+        throw error;
+      }
+    }
+    
+    /**
+     * Check if the camera is currently online and streaming
+     * @returns {boolean} - True if the video element is playing and not in an error state
+     */
+    isCameraOnline() {
+      return this.videoElement && 
+             !this.videoElement.paused && 
+             !this.videoElement.ended && 
+             this.videoElement.readyState > 2;
+    }
+    
+    /**
+     * Check if audio is currently available and can be played
+     * @returns {boolean} - True if the audio element is ready to play
+     */
+    isAudioAvailable() {
+      return this.audioElement && this.audioElement.readyState > 2;
+    }
+    
+    /**
+     * Clean up resources used by the controller
+     */
+    destroy() {
+      // Stop recording if in progress
+      if (this.isRecording) {
+        this.stopRecording().catch(console.error);
+      }
+      
+      // Clear timer if it exists
+      if (this.recordingTimer) {
+        clearInterval(this.recordingTimer);
+        this.recordingTimer = null;
+      }
+      
+      // Pause streams
+      if (this.videoElement) {
+        this.videoElement.pause();
+      }
+      
+      if (this.audioElement) {
+        this.audioElement.pause();
+      }
+      
+      // Remove any created elements
+      if (this.audioElement && this.audioElement.parentNode && 
+          this.audioElement.id === this.audioElementId) {
+        this.audioElement.parentNode.removeChild(this.audioElement);
+      }
+    }
   }
-
   
-  // Expose globally
-  window.CameraController = CameraController;
-  
+  // Export the class for module use if needed
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = CameraController;
+  }

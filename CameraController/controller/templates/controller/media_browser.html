@@ -3,6 +3,93 @@
 
 {% block title %}Media Browser{% endblock %}
 
+{% block head %}
+<style>
+  /* Media browser specific styles */
+  .tab-content {
+    display: none;
+  }
+  
+  .tab-content.active {
+    display: block;
+  }
+  
+  .gallery-controls {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--clr-bg);
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+  }
+  
+  .gallery-item {
+    position: relative;
+    transition: transform 0.2s;
+  }
+  
+  .gallery-item:hover {
+    transform: scale(1.02);
+  }
+  
+  .gallery-item .select-item {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 5;
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  
+  .gallery.list-view .gallery-item {
+    margin-bottom: 1rem;
+  }
+  
+  .gallery.list-view .gallery-item img,
+  .gallery.list-view .gallery-item video {
+    width: 120px;
+    height: 80px;
+    object-fit: cover;
+    margin-right: 1rem;
+  }
+  
+  .gallery.list-view .item-controls {
+    position: static;
+    margin-left: auto;
+  }
+  
+  .gallery.list-view .gallery-item .select-item {
+    position: static;
+    margin-right: 1rem;
+  }
+  
+  .selection-count {
+    background: var(--clr-primary);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius);
+    margin-left: 0.5rem;
+  }
+  
+  /* Enhanced modal */
+  .modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    z-index: 999;
+  }
+  
+  .media-preview {
+    max-width: 90vw;
+    max-height: 80vh;
+    object-fit: contain;
+  }
+</style>
+{% endblock %}
+
 {% block navigation %}
 <div class="card navigation-card span-2">
   <div class="navigation-grid tabs" role="tablist">
@@ -26,11 +113,11 @@
       <button id="photos-unselect-all" class="btn-action"><i class="fas fa-square"></i> Unselect All</button>
     </div>
     <div class="spacer"></div>
-    <button id="photos-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
+    <button id="photos-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected <span class="selection-count" style="display:none;">0</span></button>
     <form id="photos-download-selected-form" method="post" action="{% url 'download_selected_photos' %}">
       {% csrf_token %}
       <div class="selected-inputs"></div>
-      <button id="photos-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
+      <button id="photos-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected <span class="selection-count" style="display:none;">0</span></button>
     </form>
     <form method="post" action="{% url 'download_all_photos' %}">
       {% csrf_token %}
@@ -52,11 +139,11 @@
       <button id="videos-unselect-all" class="btn-action"><i class="fas fa-square"></i> Unselect All</button>
     </div>
     <div class="spacer"></div>
-    <button id="videos-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
+    <button id="videos-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected <span class="selection-count" style="display:none;">0</span></button>
     <form id="videos-download-selected-form" method="post" action="{% url 'download_selected_videos' %}">
       {% csrf_token %}
       <div class="selected-inputs"></div>
-      <button id="videos-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
+      <button id="videos-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected <span class="selection-count" style="display:none;">0</span></button>
     </form>
     <form method="post" action="{% url 'download_all_videos' %}">
       {% csrf_token %}
@@ -78,11 +165,11 @@
       <button id="tl-unselect-all" class="btn-action"><i class="fas fa-square"></i> Unselect All</button>
     </div>
     <div class="spacer"></div>
-    <button id="tl-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
+    <button id="tl-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected <span class="selection-count" style="display:none;">0</span></button>
     <form id="tl-download-selected-form" method="post" action="{% url 'download_selected_timelapse' %}">
       {% csrf_token %}
       <div class="selected-inputs"></div>
-      <button id="tl-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
+      <button id="tl-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected <span class="selection-count" style="display:none;">0</span></button>
     </form>
     <form method="post" action="{% url 'download_all_timelapse' %}">
       {% csrf_token %}
@@ -91,6 +178,11 @@
     <button id="tl-delete-all" class="btn-action"><i class="fas fa-trash-alt"></i> Delete All</button>
   </div>
 </section>
+
+<div class="gallery-status-bar" style="display:none;">
+  <div class="status-message"></div>
+  <div class="loading-indicator"><i class="fas fa-spinner fa-spin"></i> Processing...</div>
+</div>
 {% endblock %}
 
 {% block content %}
@@ -100,13 +192,13 @@
   <section id="photos" class="tab-content active">
     <div id="photos-gallery" class="gallery grid-view">
       {% for photo in photos %}
-      <div class="gallery-item" data-filename="{{ photo.filename }}">
+      <div class="gallery-item" data-filename="{{ photo.filename }}" data-type="photo">
         <input type="checkbox" class="select-item">
-        <img src="{{ photo.url }}" alt="{{ photo.filename }}">
+        <img src="{{ photo.url }}" alt="{{ photo.filename }}" loading="lazy">
         <div class="item-controls">
-          <button class="btn-action preview-item" data-url="{{ photo.url }}"><i class="fas fa-eye"></i></button>
-          <a href="{{ photo.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
-          <button class="btn-action delete-item" data-url="{% url 'api_delete_photo' filename=photo.filename %}">
+          <button class="btn-action preview-item" data-url="{{ photo.url }}" title="Preview"><i class="fas fa-eye"></i></button>
+          <a href="{{ photo.url }}" download class="btn-action" title="Download"><i class="fas fa-download"></i></a>
+          <button class="btn-action delete-item" data-url="{% url 'api_delete_photo' filename=photo.filename %}" title="Delete">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
@@ -121,15 +213,15 @@
   <section id="videos" class="tab-content" hidden>
     <div id="videos-gallery" class="gallery grid-view">
       {% for video in videos %}
-      <div class="gallery-item" data-filename="{{ video.filename }}">
+      <div class="gallery-item" data-filename="{{ video.filename }}" data-type="video">
         <input type="checkbox" class="select-item">
-        <video muted>
+        <video muted preload="metadata">
           <source src="{{ video.url }}" type="video/mp4">
         </video>
         <div class="item-controls">
-          <button class="btn-action preview-item" data-url="{{ video.url }}"><i class="fas fa-eye"></i></button>
-          <a href="{{ video.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
-          <button class="btn-action delete-item" data-url="{% url 'api_delete_video' filename=video.filename %}">
+          <button class="btn-action preview-item" data-url="{{ video.url }}" title="Preview"><i class="fas fa-eye"></i></button>
+          <a href="{{ video.url }}" download class="btn-action" title="Download"><i class="fas fa-download"></i></a>
+          <button class="btn-action delete-item" data-url="{% url 'api_delete_video' filename=video.filename %}" title="Delete">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
@@ -144,13 +236,13 @@
   <section id="timelapse" class="tab-content" hidden>
     <div id="tl-gallery" class="gallery grid-view">
       {% for tl in timelapses %}
-      <div class="gallery-item" data-filename="{{ tl.filename }}">
+      <div class="gallery-item" data-filename="{{ tl.filename }}" data-type="timelapse">
         <input type="checkbox" class="select-item">
-        <img src="{{ tl.url }}" alt="{{ tl.filename }}">
+        <img src="{{ tl.url }}" alt="{{ tl.filename }}" loading="lazy">
         <div class="item-controls">
-          <button class="btn-action preview-item" data-url="{{ tl.url }}"><i class="fas fa-eye"></i></button>
-          <a href="{{ tl.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
-          <button class="btn-action delete-item" data-url="{% url 'api_delete_timelapse' filename=tl.filename %}">
+          <button class="btn-action preview-item" data-url="{{ tl.url }}" title="Preview"><i class="fas fa-eye"></i></button>
+          <a href="{{ tl.url }}" download class="btn-action" title="Download"><i class="fas fa-download"></i></a>
+          <button class="btn-action delete-item" data-url="{% url 'api_delete_timelapse' filename=tl.filename %}" title="Delete">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
@@ -164,11 +256,65 @@
 </div>
 
 <!-- Preview Modal -->
-<div id="preview-modal" class="modal">
-  <div class="modal-content">
-    <span id="preview-close" class="modal-close">&times;</span>
-    <img id="preview-img" style="display:none;" alt="Preview">
-    <video id="preview-video" controls style="display:none;"></video>
+<div id="preview-modal" class="modal" aria-hidden="true">
+  <div class="modal-wrapper">
+    <button id="preview-close" class="modal-close">&times;</button>
+    <div class="modal-header">
+      <h3 id="preview-title">Media Preview</h3>
+    </div>
+    <div class="modal-content">
+      <img id="preview-img" class="media-preview" style="display:none;" alt="Preview">
+      <video id="preview-video" class="media-preview" controls style="display:none;"></video>
+    </div>
+    <div class="modal-footer">
+      <a id="preview-download" href="#" download class="btn-action">
+        <i class="fas fa-download"></i> Download
+      </a>
+    </div>
   </div>
+  <div class="modal-backdrop"></div>
 </div>
+
+<!-- Confirmation Modal -->
+<div id="confirm-modal" class="modal" aria-hidden="true">
+  <div class="modal-wrapper">
+    <div class="modal-header">
+      <button class="modal-close" data-action="cancel">&times;</button>
+      <h3 id="confirm-title">Confirmation</h3>
+    </div>
+    <div class="modal-content">
+      <p id="confirm-message">Are you sure you want to proceed?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-action" data-action="cancel">Cancel</button>
+      <button class="btn-action" data-action="confirm">Confirm</button>
+    </div>
+  </div>
+  <div class="modal-backdrop"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Add any page-specific customizations here
+  document.addEventListener('DOMContentLoaded', function() {
+    // Auto-play videos on hover in grid view
+    const galleries = document.querySelectorAll('.gallery');
+    galleries.forEach(gallery => {
+      gallery.addEventListener('mouseover', function(e) {
+        if (e.target.tagName === 'VIDEO') {
+          e.target.play().catch(err => {
+            // Ignore autoplay errors
+          });
+        }
+      });
+      
+      gallery.addEventListener('mouseout', function(e) {
+        if (e.target.tagName === 'VIDEO') {
+          e.target.pause();
+        }
+      });
+    });
+  });
+</script>
 {% endblock %}

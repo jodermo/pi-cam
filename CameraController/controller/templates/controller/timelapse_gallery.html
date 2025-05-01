@@ -1,40 +1,194 @@
 {% extends "controller/base.html" %}
+{% load static %}
 
 {% block title %}Timelapse Gallery{% endblock %}
+
+{% block head %}
+<style>
+  .timelapse-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .timelapse-viewer {
+    flex: 1;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .player {
+    flex: 1;
+    background: #000;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  
+  #timelapse-canvas {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  
+  .frame-timestamp {
+    position: absolute;
+    bottom: var(--spacing-sm);
+    right: var(--spacing-sm);
+    background: rgba(0,0,0,0.6);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    color: var(--clr-accent);
+  }
+  
+  .player-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: var(--spacing-sm);
+    background: var(--clr-panel);
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  .action-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .speed-input {
+    width: 80px;
+  }
+  
+  .speed-slider {
+    width: 150px;
+  }
+  
+  .timelapse-navigation {
+    margin-top: 1rem;
+  }
+  
+  .thumbnails {
+    display: flex;
+    gap: var(--spacing-xs);
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: var(--spacing-sm) 0;
+  }
+  
+  .thumb {
+    flex: 0 0 auto;
+    width: 100px;
+    height: 70px;
+    border: 2px solid transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+    object-fit: cover;
+  }
+  
+  .thumb:hover {
+    transform: scale(1.05);
+  }
+  
+  .thumb.active {
+    border-color: var(--clr-accent);
+  }
+  
+  .timelapse-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .timelapse-controls .spacer {
+    flex: 1;
+  }
+  
+  .playback-info {
+    font-size: 0.85rem;
+    color: var(--clr-muted);
+  }
+  
+  .time-display {
+    margin-left: 1rem;
+    font-weight: bold;
+  }
+  
+  @media (max-width: 768px) {
+    .player-controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .action-group {
+      width: 100%;
+      justify-content: space-between;
+    }
+    
+    .speed-slider {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
 
 {% block actions %}
 <div class="player-controls">
   <div class="action-group">
     <button id="play-pause" class="btn-action">
-      <!-- show/hide these via JS depending on state -->
       <i class="fas fa-play" aria-hidden="true"></i>
       <i class="fas fa-pause" aria-hidden="true" style="display:none;"></i>
+      <span class="button-text">Play</span>
     </button>
-    <label for="speed-number">Speed (ms/frame):</label>
+    
+    <div class="playback-info">
+      Frame <span id="current-frame">0</span>/<span id="total-frames">{{ images|length }}</span>
+      <span class="time-display" id="playback-speed">500ms</span>
+    </div>
   </div>
+  
   <div class="action-group">
-    <input id="speed-number" type="number" min="25" value="500" class="input-field speed-input" />
-    <input id="speed-slider" type="range" min="25" max="2000" step="50" value="500" class="speed-slider" />
+    <label for="speed-number">Speed:</label>
+    <input id="speed-number" type="number" min="25" max="2000" value="500" class="input-field speed-input" />
+    <input id="speed-slider" type="range" min="25" max="2000" step="25" value="500" class="speed-slider" />
   </div>
-
-  <button id="open-tl-settings" class="btn-action">
-    <i class="fas fa-cog" aria-hidden="true"></i>
-  </button>
-
-  <form method="post" action="{% url 'download_timelapse' %}" id="download-tl-form" style="display:inline;">
-    {% csrf_token %}
-    <input type="hidden" name="speed_ms" id="download-speed" value="{{ timelapse_speed_ms }}">
-    <button type="submit" class="btn-action">
-      <i class="fas fa-download" aria-hidden="true"></i>
+  
+  <div class="spacer"></div>
+  
+  <div class="action-group">
+    <button id="open-tl-settings" class="btn-action" title="Timelapse Settings">
+      <i class="fas fa-cog" aria-hidden="true"></i>
     </button>
-  </form>
+    
+    <form method="post" action="{% url 'download_timelapse' %}" id="download-tl-form" style="display:inline;">
+      {% csrf_token %}
+      <input type="hidden" name="speed_ms" id="download-speed" value="500">
+      <button type="submit" class="btn-action" title="Download Timelapse Video">
+        <i class="fas fa-download" aria-hidden="true"></i>
+      </button>
+    </form>
+    
+    <a href="{% url 'media_browser' %}#timelapse" class="btn-action" title="Manage Timelapse Frames">
+      <i class="fas fa-photo-video" aria-hidden="true"></i>
+    </a>
+  </div>
 </div>
 {% endblock %}
 
-
 {% block content %}
 <div class="timelapse-container">
-
   <!-- Viewer Card -->
   <section class="card timelapse-viewer">
     <div class="player">
@@ -43,8 +197,19 @@
     </div>
   </section>
 
+  <!-- Timeline Scrollbar -->
+  <div class="timelapse-controls">
+    <button id="prev-frame" class="btn-action">
+      <i class="fas fa-step-backward"></i>
+    </button>
+    
+    <input type="range" id="timeline-slider" min="0" max="{{ images|length|add:'-1' }}" value="0" class="timeline-slider" style="flex:1;">
+    
+    <button id="next-frame" class="btn-action">
+      <i class="fas fa-step-forward"></i>
+    </button>
+  </div>
 </div>
-
 
 <!-- Timelapse Settings Modal -->
 <div id="timelapse-settings-modal" class="modal" aria-hidden="true">
@@ -82,20 +247,103 @@
 
 {% block navigation %}
 <div class="app-navigation timelapse-navigation">
-
   <div class="thumbnail-container">
-    <!-- Nav buttons must live INSIDE the scrolling .thumbnails -->
     <div class="thumbnails">
-      {% for url in images reversed %}
+      {% for url in images %}
         <img
           class="thumb"
           data-index="{{ forloop.counter0 }}"
           data-src="{{ url }}"
-          src="{{ url }}?{{ forloop.counter0 }}"
+          src="{{ url }}"
           alt="Frame {{ forloop.counter }}"
+          loading="lazy"
         />
+      {% empty %}
+        <p class="muted">No timelapse frames available. Go to the camera page to capture some.</p>
       {% endfor %}
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Additional page-specific customizations
+  document.addEventListener('DOMContentLoaded', function() {
+    // Timeline slider
+    const timelineSlider = document.getElementById('timeline-slider');
+    const prevFrameBtn = document.getElementById('prev-frame');
+    const nextFrameBtn = document.getElementById('next-frame');
+    
+    if (timelineSlider && window.timelapseController) {
+      timelineSlider.addEventListener('input', function() {
+        const frameIndex = parseInt(this.value, 10);
+        window.timelapseController.drawFrame(frameIndex);
+      });
+      
+      // Previous frame button
+      if (prevFrameBtn) {
+        prevFrameBtn.addEventListener('click', function() {
+          const currentIndex = parseInt(timelineSlider.value, 10);
+          const newIndex = Math.max(0, currentIndex - 1);
+          timelineSlider.value = newIndex;
+          window.timelapseController.drawFrame(newIndex);
+        });
+      }
+      
+      // Next frame button
+      if (nextFrameBtn) {
+        nextFrameBtn.addEventListener('click', function() {
+          const currentIndex = parseInt(timelineSlider.value, 10);
+          const maxIndex = parseInt(timelineSlider.max, 10);
+          const newIndex = Math.min(maxIndex, currentIndex + 1);
+          timelineSlider.value = newIndex;
+          window.timelapseController.drawFrame(newIndex);
+        });
+      }
+      
+      // Update timeline when frame changes
+      const originalDrawFrame = window.timelapseController.drawFrame;
+      window.timelapseController.drawFrame = function(index) {
+        // Call the original method
+        originalDrawFrame.call(window.timelapseController, index);
+        
+        // Update the timeline slider
+        if (timelineSlider) {
+          timelineSlider.value = index;
+        }
+        
+        // Update frame counter
+        const currentFrameEl = document.getElementById('current-frame');
+        if (currentFrameEl) {
+          currentFrameEl.textContent = index + 1;
+        }
+      };
+    }
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      // Space = play/pause
+      if (e.code === 'Space' && window.timelapseController) {
+        e.preventDefault();
+        const playPauseBtn = document.getElementById('play-pause');
+        if (playPauseBtn) {
+          playPauseBtn.click();
+        }
+      }
+      
+      // Left arrow = previous frame
+      if (e.code === 'ArrowLeft' && prevFrameBtn) {
+        e.preventDefault();
+        prevFrameBtn.click();
+      }
+      
+      // Right arrow = next frame
+      if (e.code === 'ArrowRight' && nextFrameBtn) {
+        e.preventDefault();
+        nextFrameBtn.click();
+      }
+    });
+  });
+</script>
 {% endblock %}

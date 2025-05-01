@@ -46,7 +46,6 @@ services:
     depends_on:
       - pi-cam-controller
       - pi-cam-camera
-
   pi-cam-database:
     image: postgres:14-alpine
     restart: always

@@ -3,58 +3,112 @@
 
 {% block title %}Dashboard - USB Camera Controller{% endblock %}
 
+{% block head %}
+<style>
+  .recording-indicator {
+    display: none;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background-color: rgba(255, 0, 0, 0.7);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    animation: pulse 1s infinite;
+    z-index: 10;
+  }
+  
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
+  
+  .header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .device-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .device-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+  }
+  
+  .status-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    background-color: var(--clr-error);
+  }
+  
+  .status-indicator.online {
+    background-color: var(--clr-accent);
+  }
+  
+  .status-display {
+    display: flex;
+    align-items: center;
+  }
+</style>
+{% endblock %}
+
 {% block actions %}
-{% if camera_list %}
-  <div class="camera-source">
-    <form id="camera-form" class="camera-select" method="post" action="{% url 'switch_camera' idx=0 %}">
-      {% csrf_token %}
-      <div class="select-container">
-        <span>Camera Device:</span>
-        <select id="camera-select" name="idx" onchange="controller.updateCameraForm(this.value);">
-          {% for src in camera_list %}
-            <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>
-              {{ src }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-    </form>
+<div class="header-bar">
+  <div class="device-controls">
+    {% if camera_list %}
+    <div class="device-selector">
+      <span>Camera:</span>
+      <select id="camera-select" name="idx">
+        {% for camera in camera_list %}
+          <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>
+            {{ camera.name|default:camera }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    
+    {% if audio_inputs %}
+    <div class="device-selector">
+      <span>Audio:</span>
+      <select id="audio-select">
+        {% for device in audio_inputs %}
+          <option value="{{ forloop.counter0 }}"
+            {% if forloop.counter0 == active_audio_idx %}selected{% endif %}>
+            {{ device.name|default:device }}
+          </option>
+        {% endfor %}
+      </select>
+      
+      <button id="audio-toggle" class="btn-action" title="Unmute Audio">
+        <i class="fas fa-volume-mute"></i>
+      </button>
+    </div>
+    {% endif %}
+    
+    <button id="refresh-devices" class="btn-action" title="Refresh Device List">
+      <i class="fas fa-sync"></i>
+    </button>
   </div>
-  <div class="header-bar">
-    <div class="status-indicator" id="camera-status"></div>
+  
+  <div class="status-display">
+    <div class="status-indicator online" id="camera-status"></div>
+    <span id="status-text">Camera {{ active_index|add:"1" }}</span>
   </div>
-{% endif %}
-{% if audio_inputs %}
-<div class="audio-controls card">
-  <audio
-    id="live-audio"
-    controls
-    autoplay
-    preload="none"
-    src="{% url 'stream_audio' %}"
-    type="audio/ogg"
-  ></audio>
-
-  <div class="select-container">
-    <label for="audio-select">Audio Device:</label>
-    <select id="audio-select">
-      {% for dev in audio_inputs %}
-        <option value="{{ forloop.counter0 }}"
-          {% if forloop.counter0 == active_audio_idx %}selected{% endif %}>
-          {{ dev }}
-        </option>
-      {% endfor %}
-    </select>
-  </div>
-
-  <button class="btn-action" id="audio-switch-btn">
-    <i class="fas fa-exchange-alt"></i> Switch Audio
-  </button>
-  <button class="btn-action" id="audio-restart-btn">
-    <i class="fas fa-redo"></i> Restart Audio
-  </button>
 </div>
-{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -62,26 +116,73 @@
 
   <!-- Live Stream Card -->
   <div class="card stream-card">
-
     <div class="stream-wrapper">
       <img
-        id="live-stream"
+        id="camera-stream"
         class="stream"
         src="{{ stream_url }}"
         alt="Live camera stream"
       />
+      
+      <audio
+        id="audio-stream"
+        src="{{ audio_stream_url }}"
+        preload="auto"
+        style="display: none;"
+      ></audio>
+      
+      <div id="recording-indicator" class="recording-indicator" {% if is_recording %}style="display: block;"{% endif %}>
+        <i class="fas fa-circle"></i> 
+        <span id="recording-timer">00:00</span>
+      </div>
+      
       <div class="stream-overlay">
         <div class="status-bar">
           <div id="current-time"></div>
           <div id="recording-status"></div>
-          <div id="recording-duration"></div>
-          <div id="last-video-block"></div>
-        </div>
-        <div id="recording-duration">
-          {% if recording_elapsed %}{{ recording_elapsed }}{% endif %}
+          <div id="recording-duration">
+            {% if recording_elapsed %}{{ recording_elapsed }}{% endif %}
+          </div>
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Last recording preview -->
+  <div id="last-video-block" {% if not last_video_url %}style="display:none;"{% endif %}>
+    {% if last_video_url %}
+    <div class="video-item">
+      <video controls src="{{ last_video_url }}"></video>
+      <div class="video-controls">
+        <a href="{{ last_video_url }}" download class="btn-action">
+          <i class="fas fa-download"></i> Download
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Camera control buttons -->
+  <div class="stream-controls">
+    <button id="capture-btn" class="btn-action" data-action="capture">
+      <i class="fas fa-camera"></i> Capture
+    </button>
+    
+    <button id="record-btn" class="btn-action {% if is_recording %}active{% endif %}" data-action="record">
+      {% if is_recording %}
+      <i class="fas fa-stop-circle"></i> Stop Recording
+      {% else %}
+      <i class="fas fa-dot-circle"></i> Record
+      {% endif %}
+    </button>
+    
+    <button id="settings-btn" class="btn-action" data-action="settings">
+      <i class="fas fa-cog"></i> Settings
+    </button>
+    
+    <button id="restart-btn" class="btn-action" data-action="restart">
+      <i class="fas fa-sync-alt"></i> Restart
+    </button>
   </div>
 
   <!-- Settings Modal -->
@@ -95,35 +196,29 @@
         <div class="settings-grid">
           {% for setting in settings_fields %}
             <div class="setting-row">
-              <label for="id_{{ setting.name }}">{{ setting.name|capfirst }}</label>
-              <input
-                id="id_{{ setting.name }}"
-                type="number"
-                min="0"
-                max="255"
-                value="{{ setting.value }}"
-              />
+              <label for="slider_{{ setting.name }}">{{ setting.name|capfirst }}</label>
               <input
                 id="slider_{{ setting.name }}"
+                class="setting-slider"
                 type="range"
                 min="0"
                 max="255"
                 value="{{ setting.value }}"
+                data-setting="{{ setting.name }}"
               />
-              <button
-                class="btn-small"
-                onclick="controller.submitSetting('{{ setting.name }}'); return false;"
-              >Set</button>
+              <span id="{{ setting.name }}-value">{{ setting.value }}</span>
             </div>
           {% endfor %}
           <div class="setting-row checkbox-row">
             <label for="id_auto_exposure">Auto Exposure</label>
-            <input
-              id="id_auto_exposure"
-              type="checkbox"
-              {% if db_settings.auto_exposure %}checked{% endif %}
-              onchange="controller.submitSetting('auto_exposure', this.checked ? 1 : 0)"
-            />
+            <div class="toggle-wrapper">
+              <input
+                id="id_auto_exposure"
+                type="checkbox"
+                {% if db_settings.auto_exposure %}checked{% endif %}
+              />
+            </div>
+            <span></span>
           </div>
         </div>
       </div>
@@ -136,97 +231,9 @@
     Camera recovered
   </div>
 
-
-
 </div>
-
-
-
 {% endblock %}
-
-{% block navigation %}
-  <!-- Action buttons: restart, snapshot, record, stop, settings -->
-  <div class="card navigation-card span-2">
-    <div class="navigation-grid">
-      <button class="btn-action" onclick="controller.postAction('{% url 'restart' %}');">
-        <i class="fas fa-sync-alt"></i>
-      </button>
-      <button
-        class="btn-action"
-        onclick="controller.postAction('{% url 'capture_photo' %}', true);"
-      >
-        <i class="fas fa-camera"></i>
-      </button>
-      <form id="record-form" method="post" action="{% url 'start_recording' %}">
-        {% csrf_token %}
-        <input type="hidden" name="audio_idx" id="record-audio-idx" value="{{ active_audio_idx }}">
-        <button
-          type="button"
-          id="start-record"
-          class="btn-action {% if is_recording %}active{% endif %}"
-        >
-          <i class="fas fa-dot-circle"></i>
-        </button>
-      </form>
-
-      <button class="btn-action" onclick="controller.postAction('{% url 'stop_recording' %}');">
-        <i class="fas fa-stop-circle"></i>
-      </button>
-      <button class="btn-action" id="open-settings">
-        <i class="fas fa-cog"></i>
-      </button>
-    </div>
-
-  </div>
-{% endblock %}
-
-
 
 {% block scripts %}
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const audioEl = document.getElementById('live-audio');
-    const select  = document.getElementById('audio-select');
-    const switchBtn  = document.getElementById('audio-switch-btn');
-    const restartBtn = document.getElementById('audio-restart-btn');
-    const csrftoken  = '{{ csrf_token }}';
-    const base      = window.location.origin;
-    
-    function reloadStream() {
-      // bust cache so audio tag reconnects
-      audioEl.src = `{% url 'stream_audio' %}?_=${Date.now()}`;
-      audioEl.load();
-      audioEl.play().catch(() => {});
-    }
-
-    switchBtn?.addEventListener('click', async () => {
-      const idx = select.value;
-      try {
-        const res = await fetch(`${base}/api/switch-audio/${idx}`, {
-          method: 'POST',
-          headers: { 'X-CSRFToken': csrftoken }
-        });
-        if (!res.ok) throw await res.json();
-        reloadStream();
-      } catch (e) {
-        alert('Failed to switch audio: ' + (e.error||e.detail||e));
-      }
-    });
-
-    restartBtn?.addEventListener('click', async () => {
-      // re-switch to same index to force ffmpeg restart
-      const idx = select.value;
-      try {
-        const res = await fetch(`${base}/api/switch-audio/${idx}`, {
-          method: 'POST',
-          headers: { 'X-CSRFToken': csrftoken }
-        });
-        if (!res.ok) throw await res.json();
-        reloadStream();
-      } catch (e) {
-        alert('Failed to restart audio: ' + (e.error||e.detail||e));
-      }
-    });
-  });
-</script>
+<!-- Any page-specific scripts can go here -->
 {% endblock %}

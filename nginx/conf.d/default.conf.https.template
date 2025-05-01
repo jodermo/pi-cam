@@ -1,30 +1,35 @@
 # nginx/conf.d/default.conf.https.template
-
-
 # ─────────────── MIME setup ────────────────────
 include       /etc/nginx/mime.types;
 # ────────────────────────────────────────────────
 
+map $request_uri $loggable {
+    "/api/stream/audio"    0;
+    default                  1;
+}
 
 # Redirect HTTP to HTTPS (in your HTTP template or in a separate file)
 server {
     listen 80;
     server_name ${DOMAIN};
+    access_log /var/log/nginx/access.log combined if=$loggable;
     return 301 https://$host$request_uri;
 }
-
 # HTTPS server block
 server {
     listen 443 ssl http2;
     server_name ${DOMAIN};
-
+    access_log /var/log/nginx/access.log combined if=$loggable;
     # SSL certificates (mounted via your .env settings)
     ssl_certificate     ${SSL_CERTIFICATE};
     ssl_certificate_key ${SSL_CERTIFICATE_KEY};
     ssl_protocols       TLSv1.2 TLSv1.3;
     ssl_ciphers         HIGH:!aNULL:!MD5;
-
+    
+    # MJPEG stream - proxy directly to camera container
     location = /api/stream {
+        access_log  off;
+        error_log   /dev/null crit;
         proxy_pass         http://pi-cam-camera:8000/api/stream;
         proxy_http_version 1.1;
         proxy_set_header   Host $host;
@@ -33,69 +38,96 @@ server {
         chunked_transfer_encoding off;
         proxy_buffering    off;
     }
-
-    location = /stream/audio {
-        proxy_pass         http://pi-cam-camera:8000/stream/audio;
+    
+    # Audio stream - proxy directly to camera container
+    location = /api/stream/audio {
+        access_log off;   # Turn off access logs completely
+        error_log /dev/null crit;   # Send errors to /dev/null
+        proxy_pass         http://pi-cam-camera:8000/api/stream/audio;
         proxy_http_version 1.1;
-        proxy_set_header   Host $host;
-        proxy_set_header   X-Real-IP $remote_addr;
-        proxy_set_header   Connection "";
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   Connection        "";
         chunked_transfer_encoding off;
         proxy_buffering    off;
     }
-
+    
+    # Camera service health check
+    location = /health {
+        proxy_pass         http://pi-cam-camera:8000/health;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+    }
+    
+    # Audio sources endpoint
+    location = /api/audio-sources {
+        proxy_pass         http://pi-cam-camera:8000/audio-sources;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+    }
+    
+    # Switch audio endpoint
+    location ~ ^/api/switch-audio/([0-9]+)/?$ {
+        proxy_pass         http://pi-cam-camera:8000/switch-audio/$1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+    }
+    
+    # Device refresh endpoint
+    location = /refresh-devices {
+        proxy_pass         http://pi-cam-camera:8000/refresh-devices;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+    }
+    
     # Bare /api → controller
     location = /api {
         proxy_pass         http://pi-cam-controller:8001/api;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
     }
-
-    # All other API → controller
+    
+    # All other API calls → controller
     location /api/ {
         proxy_pass         http://pi-cam-controller:8001/api/;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
     }
-
-    # Main controller app proxy
+    
+    # All other routes → controller
     location / {
         proxy_pass         http://pi-cam-controller:8001;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
     }
-
-
-    # Static and media
+    
+    # Static files
     location /static/ {
         alias /app/static/;
         access_log off;
-        expires 1h;
+        expires 30d;
     }
-
-
-
+    
+    # Media files
     location /media/ {
         alias           /app/media/;
         # mime.types already included above
         add_header      Accept-Ranges bytes;
         expires         1h;
         access_log      off;
-
-
         types {
-        video/mp4  mp4;
+            video/mp4  mp4;
         }
         default_type  application/octet-stream;
     }
-
+    
+    # Videos
     location /media/videos/ {
         alias           /app/media/videos/;
         # mime.types already included above
         add_header      Accept-Ranges bytes;
         expires         1h;
         access_log      off;
-
         types {
             video/mp4  mp4;
         }

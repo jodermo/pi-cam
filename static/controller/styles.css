@@ -21,7 +21,7 @@
   --spacing-md: 1.5rem;
   --spacing-lg: 2.5rem;
   --radius: 0.75rem;
-  --max-width: 960px;
+  --max-width: 1200px;
   --font-base: 1rem/1.6 "Segoe UI", Roboto, sans-serif;
 }
 
@@ -37,128 +37,63 @@ body {
   overflow: hidden;
 }
 
+/*--------------------------------------
+  2. Layout Containers
+---------------------------------------*/
 .app-wrapper {
   max-width: var(--max-width);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-content: center;
   height: 100vh;
 }
-
 .content {
   flex: 1;
   overflow-y: auto;
-
+  padding: var(--spacing-md);
 }
-
-.stream-wrapper img{
-  width: 100%;
-  height: auto;
-  display: block;
-
-}
-
-/*--------------------------------------
-  2. Typography
----------------------------------------*/
-h1, h2 {
-  color: var(--clr-text);
-  margin-bottom: var(--spacing-md);
-  font-weight: 600;
-}
-p {
-  margin-bottom: var(--spacing-md);
-  line-height: 1.6;
+.media-container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--spacing-md);
 }
 
 /*--------------------------------------
-  3. Navigation
+  3. Navigation & Header
 ---------------------------------------*/
-nav {
+.app-nav, .navigation-grid {
   display: flex;
   gap: var(--spacing-md);
+}
+.app-nav a,
+.navigation-grid .tab {
+  color: var(--clr-text);
   background: var(--clr-panel);
   padding: var(--spacing-sm);
   border-radius: var(--radius);
-  border: 1px solid var(--clr-border);
-  margin-bottom: var(--spacing-lg);
-}
-nav a {
-  color: var(--clr-text);
-  text-decoration: none;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius);
+  cursor: pointer;
   transition: background 0.2s;
 }
-nav a:hover,
-nav a.active {
+.app-nav a.active,
+.navigation-grid .tab.active {
   background: var(--clr-primary);
   color: #fff;
 }
 
 /*--------------------------------------
-  4. Cards & Forms
+  4. Cards & Panels
 ---------------------------------------*/
 .card,
 .form-panel {
   background: var(--clr-panel);
-  border-radius: var(--radius);
   border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
   padding: var(--spacing-md);
-
 }
 
-.form-grid {
-  display: grid;
-  gap: var(--spacing-md);
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-}
-
-.login-form{
-  position: relative;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-.login-form > div{
-  margin-bottom: var(--spacing-xs);
-}
-.form-grid label {
-  display: block;
-  margin-bottom: var(--spacing-xs);
-  font-weight: 500;
-}
-
-.navigation-grid{
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: var(--spacing-xs);
-  row-gap: var(--spacing-xs);
-}
-
-.navigation-grid > *{
-  flex: 1;
-}
-
-.input-field,
-input[type="text"],
-input[type="number"],
-select {
-  width: 100%;
-  padding: var(--spacing-sm);
-  border: 1px solid var(--clr-border);
-  border-radius: var(--radius);
-  background: #2a2a2a;
-  color: var(--clr-text);
-  transition: border-color 0.2s;
-}
-.input-field:focus {
-  outline: none;
-  border-color: var(--clr-primary);
-}
-
+/*--------------------------------------
+  5. Buttons & Inputs
+---------------------------------------*/
 .btn-action,
 button {
   display: inline-flex;
@@ -170,95 +105,168 @@ button {
   border-radius: var(--radius);
   padding: var(--spacing-sm) var(--spacing-md);
   cursor: pointer;
-  font-size: 1rem;
   transition: background 0.2s, transform 0.1s;
-  text-align: center;
 }
 .btn-action:hover,
 button:hover {
   background: var(--clr-primary-hover);
   transform: scale(1.02);
 }
-
-.btn-action.active,
-button.active {
+.btn-action.disabled,
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-action.active {
   background: var(--clr-accent);
-  transform: scale(1);
   pointer-events: none;
 }
-
-.error {
-  color: var(--clr-error);
-  font-size: 0.9em;
-  margin-top: var(--spacing-xs);
-}
-.form-group{
-  display: flex;
-  flex-wrap: wrap;
-}
-.form-group > input[type="text"],
-.form-group > input[type="number"],
-.form-group > input[type="range"]{
-  flex: 1;
-}
-.form-group > input + button{
-  margin-left:  var(--spacing-xs);
-}
-.form-group > label{
-  margin-right:  var(--spacing-xs);
-  min-width: 100px;
-}
-
-.app-nav{
+.input-field,
+input[type="text"],
+input[type="number"],
+input[type="range"],
+select {
   width: 100%;
-  display: flex;
-  flex-wrap: wrap;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  background: #2a2a2a;
+  color: var(--clr-text);
+  transition: border-color 0.2s;
 }
-
-.spacer{
-  flex: 1;
-}
-
-
-input[type="range"]{
-  margin-bottom: var(--spacing-xs);
-}
-.setting-row{
-  margin-bottom: var(--spacing-md);
-}
-.app-settings-form  .form-group{
-  margin-bottom: var(--spacing-md); 
-}
-
-.form-group > small{
-  display: block;
-  width: 100%;
-  text-align: right;
+.input-field:focus,
+select:focus {
+  outline: none;
+  border-color: var(--clr-primary);
 }
 
 /*--------------------------------------
-  5. Timelapse Viewer
+  6. Galleries
 ---------------------------------------*/
-.timelapse-container {
-  display: flex;
-  flex-direction: column;
-
+.gallery {
+  display: grid;
+  grid-gap: var(--spacing-md);
 }
-
-.timelapse-viewer {
-  flex: 1;
+.gallery.grid-view {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.gallery.list-view {
+  display: block;
+}
+.gallery.list-view .gallery-item {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  background: var(--clr-panel);
+}
+.gallery-item {
+  position: relative;
   background: var(--clr-panel);
   border: 1px solid var(--clr-border);
   border-radius: var(--radius);
   overflow: hidden;
 }
+.gallery-item img,
+.gallery-item video {
+  width: 100%;
+  display: block;
+  border-bottom: 1px solid var(--clr-border);
+}
 
-.player {
-  position: relative;
-  background: #000;
+/*--------------------------------------
+  7. Item Controls
+---------------------------------------*/
+.item-controls {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  display: flex;
+  gap: var(--spacing-xs);
+}
+.item-controls a,
+.item-controls button {
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border: none;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.item-controls a:hover,
+.item-controls button:hover {
+  background: rgba(0,0,0,0.8);
+}
+
+/*--------------------------------------
+  8. Batch Actions / Action Cards
+---------------------------------------*/
+.actions-card {
+  background: var(--clr-panel);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  padding: var(--spacing-md);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+.actions-card .layout-controls,
+.actions-card .batch-controls {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+.actions-card .spacer {
   flex: 1;
+}
+
+/*--------------------------------------
+  9. Modal Overlays
+---------------------------------------*/
+.modal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal[aria-hidden="false"], .modal.show {
+  display: flex;
+}
+.modal-wrapper,
+.modal-content {
+  position: relative;
+  background: var(--clr-panel);
+  color: var(--clr-text);
+  border-radius: var(--radius);
+  padding: var(--spacing-md);
+  max-width: 80%;
+  max-height: 80%;
+  overflow: auto;
+}
+.modal-close {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--clr-text);
+  cursor: pointer;
+}
+
+/*--------------------------------------
+ 10. Timelapse Viewer
+---------------------------------------*/
+.timelapse-viewer .player {
+  background: #000;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -272,57 +280,41 @@ input[type="range"]{
   bottom: var(--spacing-sm);
   right: var(--spacing-sm);
   background: rgba(0,0,0,0.6);
-  color: var(--clr-accent);
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--radius);
   font-size: 0.85rem;
-}
-
-.player-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.player-controls  > *{
-  flex: 1;
+  color: var(--clr-accent);
 }
 
 /*--------------------------------------
-  6. Thumbnail Strip
+ 11. Thumbnails & Preview
 ---------------------------------------*/
 .thumbnail-container {
+  margin-top: var(--spacing-sm);
   overflow: hidden;
 }
-
 .thumbnails {
   display: flex;
   gap: var(--spacing-xs);
   overflow-x: auto;
   scroll-behavior: smooth;
-  align-items: center;
   padding: var(--spacing-sm) 0;
 }
-
 .thumbnails::-webkit-scrollbar {
   height: 8px;
-}
-.thumbnails::-webkit-scrollbar-track {
-  background: var(--clr-panel);
 }
 .thumbnails::-webkit-scrollbar-thumb {
   background: var(--clr-border);
   border-radius: var(--radius);
 }
-
 .thumb {
   flex: 0 0 auto;
   width: 120px;
-  cursor: pointer;
+  height: auto;
   border: 2px solid transparent;
   border-radius: var(--radius);
-  transition: border-color 0.2s, transform 0.2s;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
 }
 .thumb:hover {
   transform: scale(1.05);
@@ -331,172 +323,29 @@ input[type="range"]{
   border-color: var(--clr-accent);
 }
 
-.thumb-nav {
-  flex: 0 0 auto;
-  background: var(--clr-primary);
-  color: #fff;
-  border: none;
-  padding: var(--spacing-xs) var(--spacing-md);
-  cursor: pointer;
-  border-radius: var(--radius);
-  transition: background 0.2s;
-}
-.thumb-nav:hover {
-  background: var(--clr-primary-hover);
-}
-
 /*--------------------------------------
-  7. Modal Overlay
+ 12. Media Preview Modal
 ---------------------------------------*/
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
+.modal-content img,
+.modal-content video {
   width: 100%;
-  height: 100%;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.modal[aria-hidden="false"] {
-  display: flex;
-}
-.modal-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.7);
-}
-.modal-wrapper {
-  position: relative;
-  background: var(--clr-panel);
-  color: var(--clr-text);
-  padding: var(--spacing-lg);
+  height: auto;
   border-radius: var(--radius);
-  max-width: 600px;
-  width: 90%;
-  max-height: 75vh;
-
-  z-index: 1001;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
 }
-
-.modal-header{
-  position: relative;
-  width: 100%;
-  display: flex;
-  padding-bottom: var(--spacing-md);
-}
-
-.modal-content{
-  position: relative;
-  flex: 1;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-.modal-close {
-  position: absolute;
-  top: 0;
-  right: 0;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--clr-text);
-  cursor: pointer;
-}
-
-.navigation-grid > button{
-  text-align: center;
-}
-
-.media-container {
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: var(--spacing-md);
-}
-.batch-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
-}
-.batch-actions .delete-all {
-  margin-left: auto;
-  background: var(--clr-error);
-}
-.batch-actions button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.media-container .gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  grid-gap: 1rem;
-}
-.gallery-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0.5rem;
-  background: #f9f9f9;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-}
-.gallery-item img,
-.gallery-item video {
-  max-width: 100%;
-  border-radius: 2px;
-}
-.timestamp {
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  color: #666;
-}
-.action-group{
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
-
-.media-container { max-width: 1200px; margin: auto; padding: 1rem; }
-.gallery.grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap:1rem; }
-.gallery.list-view { display:block; }
-.gallery.list-view .gallery-item { display:flex; align-items:center; gap:1rem; padding:0.5rem; }
-.gallery-item { position: relative; background:#fff; border:1px solid #ddd; border-radius:4px; overflow:hidden; }
-.gallery-item img, .gallery-item video { width:100%; display:block; }
-.gallery.list-view .gallery-item img, .gallery.list-view .gallery-item video { width:120px; flex-shrink:0; }
-.item-controls { position:absolute; top:8px; right:8px; display:flex; gap:0.25rem; }
-.item-controls a, .item-controls button { background:rgba(255,255,255,0.9); border:none; padding:0.25rem; border-radius:4px; cursor:pointer; }
-.actions-card { background:#f7f7f7; padding:0.75rem; border-radius:4px; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem; }
-.actions-card .layout-controls { display:flex; gap:0.5rem; }
-.actions-card .spacer { flex:1; }
-.btn-action { display:inline-flex; align-items:center; gap:0.25rem; }
-.btn-action.disabled, .btn-action:disabled { opacity:0.5; cursor:not-allowed; }
-.btn-action.active { background:#007bff; color:#fff; }
 
 /*--------------------------------------
-  8. Responsive
+ 13. Responsiveness
 ---------------------------------------*/
 @media (max-width: 600px) {
-  .form-grid {
+  .gallery.grid-view {
     grid-template-columns: 1fr;
   }
-  .player-controls {
+  .actions-card {
     flex-direction: column;
     align-items: stretch;
   }
-  .thumbnails {
-    padding: var(--spacing-xs) 0;
-  }
-  .thumb {
-    width: 80px;
+  .layout-controls,
+  .batch-controls {
+    justify-content: center;
   }
 }

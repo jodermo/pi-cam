@@ -1,57 +1,6 @@
 {% extends "controller/base.html" %}
 {% load static %}
 
-{% block extrahead %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="…" crossorigin="anonymous"/>
-<style>
-  .media-container { max-width:1200px; margin:auto; padding:1rem; }
-  .gallery.grid-view { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:1rem; }
-  .gallery.list-view { display:block; }
-  .gallery.list-view .gallery-item {
-    display:flex; align-items:center; gap:1rem; padding:0.5rem;
-    border:1px solid #ddd; border-radius:4px; margin-bottom:0.5rem;
-  }
-  .gallery-item { position:relative; background:#fff; border:1px solid #ddd; border-radius:4px; overflow:hidden; }
-  .gallery-item img, .gallery-item video { width:100%; display:block; }
-  .gallery.list-view .gallery-item img,
-  .gallery.list-view .gallery-item video { width:120px; flex-shrink:0; }
-  .item-controls {
-    position:absolute; top:8px; right:8px; display:flex; gap:0.25rem;
-  }
-  .item-controls a, .item-controls button {
-    background:rgba(255,255,255,0.9); border:none; padding:0.25rem; border-radius:4px; cursor:pointer;
-  }
-  .actions-card {
-    background:#f7f7f7; padding:.75rem; border-radius:4px; margin-bottom:1rem;
-    display:flex; align-items:center; flex-wrap:wrap; gap:.5rem;
-  }
-  .actions-card .layout-controls { display:flex; gap:.5rem; }
-  .actions-card .batch-controls { display:flex; gap:.5rem; }
-  .actions-card .spacer { flex:1; }
-  .btn-action { display:inline-flex; align-items:center; gap:.25rem; }
-  .btn-action.disabled, .btn-action:disabled { opacity:.5; cursor:not-allowed; }
-  .btn-action.active { background:#007bff; color:#fff; }
-
-  /* Modal preview */
-  .modal {
-    display:none; position:fixed; z-index:1000;
-    left:0; top:0; width:100%; height:100%; overflow:auto;
-    background:rgba(0,0,0,0.8);
-  }
-  .modal-content {
-    margin:5% auto; max-width:80%; position:relative;
-  }
-  .modal-content img, .modal-content video {
-    width:100%; height:auto; display:block;
-    border-radius:4px;
-  }
-  .modal-close {
-    position:absolute; top:8px; right:12px; font-size:2rem;
-    color:#fff; cursor:pointer;
-  }
-</style>
-{% endblock %}
-
 {% block title %}Media Browser{% endblock %}
 
 {% block navigation %}

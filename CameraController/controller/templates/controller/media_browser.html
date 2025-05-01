@@ -223,9 +223,9 @@
       if(!confirm('Delete selected?')) return;
       const names = [...boxes].filter(b=>b.checked).map(b=>b.closest('.gallery-item').dataset.filename);
       const api = {
-        photos: '{% url "api_delete_all_photos" %}'.replace('/delete-all/','/'),
-        videos: '{% url "api_delete_all_videos" %}'.replace('/delete-all/','/'),
-        tl:     '{% url "api_delete_all_timelapse" %}'.replace('/delete-all/','/')
+        photos: '{% url "api_delete_all_photos" %}',
+        videos: '{% url "api_delete_all_videos" %}',
+        tl:     '{% url "api_delete_all_timelapse" %}'
       }[prefix];
       const res = await fetch(api, {
         method:'DELETE',

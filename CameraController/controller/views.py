@@ -154,34 +154,47 @@ def index(request):
 
 
 
-
 @login_required
+@require_POST
 def set_setting(request, setting):
-    if request.method != 'POST' or setting not in SETTINGS_FIELDS + ['auto_exposure']:
-        return JsonResponse({'error': 'Invalid setting or method'}, status=400)
+    if setting not in SETTINGS_FIELDS + ['auto_exposure']:
+        return JsonResponse({'error': 'Invalid setting'}, status=400)
 
+    # parse & save to your DB as before
     raw = request.POST.get('value')
-    if raw is None:
-        return JsonResponse({'error': 'Missing value'}, status=400)
-
-    if setting == 'auto_exposure':
-        val = raw.lower() in ['on', 'true', '1']
+    val = raw.lower() in ['on','true','1'] if setting=='auto_exposure' else int(raw)
+    obj, _ = CameraSettings.objects.get_or_create(pk=1)
+    if setting=='exposure':
+        obj.manual_exposure = val
+    elif setting=='auto_exposure':
+        obj.auto_exposure = val
     else:
-        try:
-            val = int(raw)
-        except (ValueError, TypeError):
-            return HttpResponseBadRequest('Bad value')
+        setattr(obj, setting, val)
+    obj.save()
 
-    settings_obj, _ = CameraSettings.objects.get_or_create(pk=1)
-    if setting == 'exposure':
-        settings_obj.manual_exposure = val
-    elif setting == 'auto_exposure':
-        settings_obj.auto_exposure = val
-    else:
-        setattr(settings_obj, setting, val)
-    settings_obj.save()
+    # now call your FastAPI camera service
+    svc = settings.CAMERA_SERVICE_BASE.rstrip('/')
+    api_root = settings.CAMERA_API_URL.rstrip('/')
+    try:
+        resp = requests.post(
+            f"{svc}{api_root}/settings/{setting}",
+            params={'value': val},
+            timeout=2
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return JsonResponse({
+            'error': 'Saved locally but failed to apply to camera',
+            'detail': str(e)
+        }, status=502)
 
-    return JsonResponse({'status': 'ok', 'setting': setting, 'value': val})
+    return JsonResponse({
+        'status': 'ok',
+        'setting': setting,
+        'value': val,
+        'camera': data
+    })
 
 @login_required
 def capture_photo(request):
@@ -303,10 +316,22 @@ def switch_camera(request, idx):
     return JsonResponse({'status':'switched','active_idx':idx})
 
 @login_required
+@require_POST
 def restart(request):
-    return JsonResponse({'status':'restarted'})
+    # proxy restart to camera service
+    svc = settings.CAMERA_SERVICE_BASE.rstrip('/')
+    api_root = settings.CAMERA_API_URL.rstrip('/')
+    try:
+        resp = requests.post(f"{svc}{api_root}/restart", timeout=2)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'detail': str(e)
+        }, status=502)
 
-
+    return JsonResponse(data)
 
 @csrf_exempt
 def health(request):

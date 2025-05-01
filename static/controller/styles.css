@@ -438,7 +438,30 @@ input[type="range"]{
   cursor: not-allowed;
 }
 
-
+.media-container .gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-gap: 1rem;
+}
+.gallery-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+.gallery-item img,
+.gallery-item video {
+  max-width: 100%;
+  border-radius: 2px;
+}
+.timestamp {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #666;
+}
 .action-group{
   position: relative;
   display: flex;

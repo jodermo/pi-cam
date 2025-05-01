@@ -3,10 +3,9 @@
 
 {% block title %}Media Gallery{% endblock %}
 
-
 {% block content %}
-<div class="media-container">
 
+<div class="media-container">
 
   <!-- Photos -->
   <section id="photos-section" class="tab-content active" role="tabpanel">
@@ -25,9 +24,10 @@
     </div>
     <div id="photos" class="gallery">
       {% for photo in photos %}
-      <div class="gallery-item">
+      <div class="gallery-item" data-url="{{ photo.url }}">
         <input type="checkbox" class="select-photo" data-id="{{ photo.id }}">
         <img src="{{ photo.url }}" alt="Photo {{ forloop.counter }}">
+        <div class="timestamp"></div>
       </div>
       {% empty %}
       <p class="muted">No photos found.</p>
@@ -53,9 +53,10 @@
     </div>
     <div id="videos" class="gallery">
       {% for video in videos %}
-      <div class="gallery-item">
+      <div class="gallery-item" data-url="{{ video.url }}">
         <input type="checkbox" class="select-video" data-id="{{ video.id }}">
         <video src="{{ video.url }}" controls></video>
+        <div class="timestamp"></div>
       </div>
       {% empty %}
       <p class="muted">No videos found.</p>
@@ -81,9 +82,10 @@
     </div>
     <div id="timelapse" class="gallery">
       {% for tl in timelapses %}
-      <div class="gallery-item">
+      <div class="gallery-item" data-url="{{ tl.url }}">
         <input type="checkbox" class="select-tl" data-id="{{ tl.id }}">
-        <img src="{{ tl.thumbnail_url }}" alt="Timelapse {{ forloop.counter }}">
+        <img src="{{ tl.url }}" alt="Timelapse {{ forloop.counter }}">
+        <div class="timestamp"></div>
       </div>
       {% empty %}
       <p class="muted">No timelapses found.</p>
@@ -104,9 +106,6 @@
   </div>
 </div>
 {% endblock %}
-
-
-
 
 {% block scripts %}
 <script>
@@ -162,6 +161,27 @@
   bindBatch('#photos-section',    '.select-photo', 'photos-filenames',    'download-selected-photos');
   bindBatch('#videos-section',    '.select-video', 'videos-filenames',    'download-selected-videos');
   bindBatch('#timelapse-section', '.select-tl',    'tl-filenames',        'download-selected-timelapse');
+
+  // Timestamp parsing
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.gallery-item').forEach(el => {
+      const url = el.dataset.url;
+      const fname = url.split('/').pop();
+      const match = fname.match(/_(\d{8})_(\d{6})/);
+      if (match) {
+        const datePart = match[1];
+        const timePart = match[2];
+        const year = parseInt(datePart.slice(0,4), 10);
+        const month = parseInt(datePart.slice(4,6), 10) - 1;
+        const day = parseInt(datePart.slice(6,8), 10);
+        const hour = parseInt(timePart.slice(0,2), 10);
+        const minute = parseInt(timePart.slice(2,4), 10);
+        const second = parseInt(timePart.slice(4,6), 10);
+        const utcDate = new Date(Date.UTC(year, month, day, hour, minute, second));
+        el.querySelector('.timestamp').textContent = utcDate.toLocaleString();
+      }
+    });
+  });
 })();
 </script>
 {% endblock %}

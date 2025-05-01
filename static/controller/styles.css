@@ -37,6 +37,14 @@ body {
   overflow: hidden;
 }
 
+.spacer{
+  flex: 1;
+}
+
+i.fas{
+  font-size: 32px;
+}
+
 /*--------------------------------------
   2. Layout Containers
 ---------------------------------------*/
@@ -50,7 +58,6 @@ body {
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-md);
 }
 .media-container {
   max-width: var(--max-width);
@@ -74,6 +81,10 @@ body {
   cursor: pointer;
   transition: background 0.2s;
 }
+
+.navigation-grid  > *{
+  flex: 1;
+}
 .app-nav a.active,
 .navigation-grid .tab.active {
   background: var(--clr-primary);
@@ -91,6 +102,11 @@ body {
   padding: var(--spacing-md);
 }
 
+.card.stream-card
+.card.timelapse-viewer{
+  padding: 0;
+}
+
 /*--------------------------------------
   5. Buttons & Inputs
 ---------------------------------------*/
@@ -106,6 +122,8 @@ button {
   padding: var(--spacing-sm) var(--spacing-md);
   cursor: pointer;
   transition: background 0.2s, transform 0.1s;
+  text-align: center;
+  justify-content: center;
 }
 .btn-action:hover,
 button:hover {

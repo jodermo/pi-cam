@@ -172,28 +172,27 @@ def set_setting(request, setting):
         setattr(obj, setting, val)
     obj.save()
 
-    # now call your FastAPI camera service
-    svc = settings.CAMERA_SERVICE_BASE.rstrip('/')
-    api_root = settings.CAMERA_API_URL.rstrip('/')
+    svc      = CAMERA_SERVICE_BASE.rstrip('/')
+    api_root = API_PREFIX.rstrip('/')
     try:
         resp = requests.post(
             f"{svc}{api_root}/settings/{setting}",
             params={'value': val},
-            timeout=2
+            timeout=2,
         )
         resp.raise_for_status()
-        data = resp.json()
+        camera_data = resp.json()
     except Exception as e:
         return JsonResponse({
-            'error': 'Saved locally but failed to apply to camera',
+            'error': 'Saved locally but failed to apply on camera',
             'detail': str(e)
         }, status=502)
 
     return JsonResponse({
-        'status': 'ok',
+        'status':  'ok',
         'setting': setting,
-        'value': val,
-        'camera': data
+        'value':   val,
+        'camera':  camera_data
     })
 
 @login_required
@@ -315,23 +314,24 @@ def switch_camera(request, idx):
     # TODO: persist or inform service
     return JsonResponse({'status':'switched','active_idx':idx})
 
+
 @login_required
 @require_POST
 def restart(request):
-    # proxy restart to camera service
-    svc = settings.CAMERA_SERVICE_BASE.rstrip('/')
-    api_root = settings.CAMERA_API_URL.rstrip('/')
+    svc      = CAMERA_SERVICE_BASE.rstrip('/')
+    api_root = API_PREFIX.rstrip('/')
     try:
         resp = requests.post(f"{svc}{api_root}/restart", timeout=2)
         resp.raise_for_status()
-        data = resp.json()
+        camera_data = resp.json()
     except Exception as e:
         return JsonResponse({
-            'status': 'error',
+            'error': 'Failed to restart camera service',
             'detail': str(e)
         }, status=502)
 
-    return JsonResponse(data)
+    return JsonResponse(camera_data)
+
 
 @csrf_exempt
 def health(request):

@@ -37,6 +37,7 @@ if not CAMERA_SOURCES:
     CAMERA_SOURCES = ["/dev/video0"]
 
 API_PREFIX       = os.getenv("CAMERA_API_URL", "/api").rstrip("/")
+CAMERA_SERVICE_BASE = os.getenv('CAMERA_SERVICE_URL', 'http://pi-cam-camera:8000')
 STREAM_PORT      = int(os.getenv("STREAM_PORT", "8000"))
 RECONNECT_DELAY  = float(os.getenv("RECONNECT_DELAY", "1.0"))
 

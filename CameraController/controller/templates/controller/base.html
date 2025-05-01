@@ -16,7 +16,7 @@
   <div class="app-wrapper">
     <footer class="app-header">
       <nav class="app-nav">
-        <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+        <a href="{% url 'camera' %}" class="{% if request.resolver_match.url_name == 'camera' %}active{% endif %}">
           <i class="fas fa-camera" aria-hidden="true"></i>
         </a>
         <a href="{% url 'timelapse_gallery' %}" class="{% if request.resolver_match.url_name == 'timelapse_gallery' %}active{% endif %}">

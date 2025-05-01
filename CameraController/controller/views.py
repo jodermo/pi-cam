@@ -9,7 +9,7 @@ import tempfile
 import base64
 import requests
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 import zipfile
 from django.shortcuts import render, redirect
 from django.http import (
@@ -45,8 +45,9 @@ SETTINGS_FIELDS = [
 ]
 
 # Recording state
-_recording_thread = None
-_recording_path = None
+_recording_thread     = None
+_recording_path       = None
+_recording_start_time = None
 
 class StreamRecorder(threading.Thread):
     """Background thread to record MJPEG stream to MP4 file."""
@@ -105,7 +106,7 @@ def login_view(request):
         )
         if user:
             login(request, user)
-            return redirect('index')
+            return redirect('camera')
         return render(request, 'controller/login.html', {'error': 'Invalid credentials'})
     return render(request, 'controller/login.html')
 
@@ -115,7 +116,7 @@ def logout_view(request):
     return redirect('login')
 
 @login_required
-def index(request):
+def camera(request):
     settings_obj, _ = CameraSettings.objects.get_or_create(pk=1)
     db_settings = {
         'brightness': settings_obj.brightness,
@@ -249,43 +250,46 @@ def capture_photo(request):
 
 @login_required
 def start_recording(request):
-    global _recording_thread, _recording_path
+    global _recording_thread, _recording_path, _recording_start_time
     if request.method != 'POST':
         return HttpResponseBadRequest('POST only')
-
     if _recording_thread and _recording_thread.is_alive():
         return JsonResponse({'error': 'Already recording'}, status=400)
 
-    # ensure the videos folder exists
     videos_dir = os.path.join(settings.MEDIA_ROOT, 'videos')
     os.makedirs(videos_dir, exist_ok=True)
 
-    # timestamped filename
     fname = datetime.utcnow().strftime('stream_%Y%m%d_%H%M%S.mp4')
     _recording_path = os.path.join(videos_dir, fname)
 
     _recording_thread = StreamRecorder(INTERNAL_STREAM_URL, _recording_path)
     _recording_thread.start()
-    return JsonResponse({'status': 'started'})
+    _recording_start_time = datetime.utcnow()
+
+    # return server UTC timestamp (ms) and status
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    return JsonResponse({'status': 'started', 'start_ts': now_ms})
+
 
 
 
 @login_required
 def stop_recording(request):
-    global _recording_thread, _recording_path
+    global _recording_thread, _recording_path, _recording_start_time
     if request.method != 'POST':
         return HttpResponseBadRequest('POST only')
     if not _recording_thread or not _recording_thread.is_alive():
-        return HttpResponseServerError('Not recording')
+        return JsonResponse({'error': 'Not recording'}, status=400)
 
     _recording_thread.stop_event.set()
     _recording_thread.join()
+    _recording_start_time = None
 
-    # build URL under /media/videos
     rel = os.path.relpath(_recording_path, getattr(settings, 'MEDIA_ROOT', ''))
     rel = rel.replace('\\', '/')
-    url = settings.MEDIA_URL.rstrip('/') + '/' + rel
-    return JsonResponse({'status': 'stopped', 'url': url})
+    last_video_url = settings.MEDIA_URL.rstrip('/') + '/' + rel
+
+    return JsonResponse({'status': 'stopped', 'last_video': last_video_url})
 
 
 

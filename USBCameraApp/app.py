@@ -359,4 +359,11 @@ def stream_audio():
 # ----------------------------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=STREAM_PORT, log_level="info")
+    uvicorn.run(
+        "app:app",
+        host="0.0.0.0",
+        port=STREAM_PORT,
+        log_level=False,
+        access_log=False      # ← disable the access logs
+    )
+

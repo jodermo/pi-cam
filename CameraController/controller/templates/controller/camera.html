@@ -8,35 +8,39 @@
   <div class="camera-source">
     <form id="camera-form" class="camera-select" method="post" action="{% url 'switch_camera' idx=0 %}">
       {% csrf_token %}
-      <select id="camera-select" name="idx" onchange="controller.updateCameraForm(this.value);">
-        {% for src in camera_list %}
-          <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>
-            {{ src }}
-          </option>
-        {% endfor %}
-      </select>
+      <div class="select-container">
+        <span>Camera Device:</span>
+        <select id="camera-select" name="idx" onchange="controller.updateCameraForm(this.value);">
+          {% for src in camera_list %}
+            <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>
+              {{ src }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
     </form>
   </div>
-  
-
-
   <div class="header-bar">
-    <h1>USB Camera Controller</h1>
     <div class="status-indicator" id="camera-status"></div>
   </div>
 {% endif %}
-
-<audio id="live-audio" src="{% url 'stream_audio' %}" autoplay></audio>
-<select id="audio-select">
-  {% for dev in audio_inputs %}
-    <option value="{{ forloop.counter0 }}"
-      {% if forloop.counter0 == active_audio_idx %}selected{% endif %}>
-      {{ dev }}
-    </option>
-  {% endfor %}
-</select>
-<button id="audio-switch-btn">Switch Audio</button>
-
+{% if camera_list %}
+<div>
+  <audio id="live-audio" src="{% url 'stream_audio' %}" autoplay></audio>
+  <div class="select-container">
+    <span>Audio Device:</span>
+    <select id="audio-select">
+      {% for dev in audio_inputs %}
+        <option value="{{ forloop.counter0 }}"
+          {% if forloop.counter0 == active_audio_idx %}selected{% endif %}>
+          {{ dev }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <button id="audio-switch-btn">Switch Audio</button>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block content %}

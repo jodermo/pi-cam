@@ -10,13 +10,10 @@ WORKDIR /app
 # Install system dependencies for OpenCV *and* audio (ffmpeg + alsa)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-      # OpenCV deps
-      libglib2.0-0 \
-      libsm6 \
-      libxext6 \
-      libxrender-dev \
-      libgl1-mesa-glx \
-      # Audio capture and encoding
+      build-essential \
+      python3-dev \
+      portaudio19-dev \
+      libportaudio2 \
       ffmpeg \
       alsa-utils \
     && rm -rf /var/lib/apt/lists/*

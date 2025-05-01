@@ -157,14 +157,21 @@ def camera(request):
     except Exception:
         audio_inputs     = []
         active_audio_idx = 0
+        
+    raw = os.getenv('CAMERA_LOCATIONS', '/dev/video0')
+    camera_list = [loc.strip() for loc in raw.split(',') if loc.strip()]
 
+    settings_list = [
+        {'name': k, 'value': db_settings[k]}
+        for k in ('brightness','contrast','saturation','hue','gain','exposure')
+    ]
     # ——— Render the template ———
     return render(request, 'controller/camera.html', {
         'stream_url': STREAM_PATH,
         'settings_fields': settings_list,
         'settings_json': settings_json,
         'db_settings': db_settings,
-        'camera_list': None,            # or your actual list if multi-cam
+        'camera_list': camera_list if len(camera_list)>1 else None,
         'active_index': 0,
         'is_recording': is_recording,
         'last_video_url': last_video_url,

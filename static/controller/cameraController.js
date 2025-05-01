@@ -306,27 +306,29 @@ class CameraController {
       form.action = form.action.replace(/switch\/\d+/, `switch/${idx}`);
       form.submit();
     }
-  }
-  initAudioControls() {
-    const sel = document.getElementById('audio-select');
-    const btn = document.getElementById('audio-switch-btn');
-    const aud = document.getElementById('live-audio');
-  
-    btn.addEventListener('click', async () => {
-      const idx = sel.value;
-      const res = await fetch(`/api/switch-audio/${idx}/`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'X-CSRFToken': this.csrfToken }
-      });
-      if (res.ok) {
-        // reload the audio element to pick up the new device
-        aud.load();
-      } else {
-        alert('Failed to switch audio');
+
+    initAudioControls() {
+        const sel = document.getElementById('audio-select');
+        const btn = document.getElementById('audio-switch-btn');
+        const aud = document.getElementById('live-audio');
+      
+        btn.addEventListener('click', async () => {
+          const idx = sel.value;
+          const res = await fetch(`/api/switch-audio/${idx}/`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-CSRFToken': this.csrfToken }
+          });
+          if (res.ok) {
+            // reload the audio element to pick up the new device
+            aud.load();
+          } else {
+            alert('Failed to switch audio');
+          }
+        });
       }
-    });
   }
+
   
   // Expose globally
   window.CameraController = CameraController;

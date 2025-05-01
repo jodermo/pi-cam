@@ -4,4 +4,4 @@ uvicorn[standard]
 opencv-python
 python-dotenv
 sounddevice
-pyaudio
+soundfile

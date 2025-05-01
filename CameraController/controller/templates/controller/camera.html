@@ -48,12 +48,11 @@
               <label for="id_{{ setting.name }}">{{ setting.name|capfirst }}</label>
               <input id="id_{{ setting.name }}" type="number" min="0" max="255" value="{{ setting.value }}" />
               <input id="slider_{{ setting.name }}" type="range" min="0" max="255" value="{{ setting.value }}" />
-              <button class="btn-small" onclick="submitSetting('{{ setting.name }}'); return false;">Set</button>
             </div>
           {% endfor %}
           <div class="setting-row checkbox-row">
             <label for="id_auto_exposure">Auto Exposure</label>
-            <input id="id_auto_exposure" type="checkbox" {% if db_settings.auto_exposure %}checked{% endif %} onchange="submitSetting('auto_exposure', this.checked ? 1 : 0)" />
+            <input id="id_auto_exposure" type="checkbox" {% if db_settings.auto_exposure %}checked{% endif %} />
           </div>
         </div>
       </div>
@@ -93,31 +92,43 @@ document.getElementById('open-settings').addEventListener('click', ()=>modal.set
 document.getElementById('close-settings').addEventListener('click', ()=>modal.setAttribute('aria-hidden','true'));
 modal.querySelector('.modal-backdrop').addEventListener('click', ()=>modal.setAttribute('aria-hidden','true'));
 
-// Sync inputs and sliders
+// Settings auto-update
 const settings = {{ settings_fields|safe }};
-settings.forEach(({name})=>{
+settings.forEach(({name}) => {
   const input = document.getElementById('id_'+name);
   const slider = document.getElementById('slider_'+name);
-  input.addEventListener('input', ()=>slider.value = input.value);
-  slider.addEventListener('input', ()=>input.value = slider.value);
+  const update = val => {
+    // sync both controls
+    input.value = val;
+    slider.value = val;
+    // send to server
+    fetch(`{% url 'set_setting' setting='__dummy__' %}`.replace('__dummy__', name), {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrftoken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ value: parseFloat(val) })
+    })
+    .then(res => {
+      if (!res.ok) return res.json().then(e => Promise.reject(e));
+    })
+    .catch(err => alert(`Error setting ${name}: ${err.detail||err.error}`));
+  };
+  input.addEventListener('input', e => update(e.target.value));
+  slider.addEventListener('input', e => update(e.target.value));
 });
 
-// Proxy single setting
-function submitSetting(name, value=null) {
-  const val = (value!==null) ? value : document.getElementById('id_'+name).value;
-  fetch(`{% url 'set_setting' setting='__dummy__' %}`.replace('__dummy__',name), {
+// Auto exposure toggle
+const auto = document.getElementById('id_auto_exposure');
+auto.addEventListener('change', () => {
+  fetch(`{% url 'set_setting' setting='auto_exposure' %}`, {
     method: 'POST',
-    headers: {
-      'X-CSRFToken': csrftoken,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: `value=${val}`
+    headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: auto.checked ? 1 : 0 })
   })
-  .then(res => res.json().then(data => ({ok: res.ok, data})))
-  .then(({ok,data})=>{
-    if(!ok) alert(`Error setting ${name}: ${data.detail||data.error}`);
-  });
-}
+  .catch(err => alert(`Error setting auto_exposure: ${err.detail||err.error}`));
+});
 
 // Action proxy (restart, snapshot, record)
 function postAction(url, isPhoto=false) {
@@ -125,19 +136,17 @@ function postAction(url, isPhoto=false) {
     method:'POST',
     headers:{ 'X-CSRFToken': csrftoken }
   })
-  .then(res=>{
-    if (!res.ok) return res.json().then(e=>Promise.reject(e));
+  .then(res => {
+    if (!res.ok) return res.json().then(e => Promise.reject(e));
     return isPhoto ? res.blob() : res.json();
   })
-  .then(data=>{
+  .then(data => {
     if(isPhoto) {
-      const url = URL.createObjectURL(data);
-      window.open(url);
+      const blobUrl = URL.createObjectURL(data);
+      window.open(blobUrl);
     }
   })
-  .catch(err=>{
-    alert(err.detail||err.error||'Action failed');
-  });
+  .catch(err => alert(err.detail||err.error||'Action failed'));
 }
 
 // Camera switch helper

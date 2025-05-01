@@ -7,25 +7,29 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install system dependencies for OpenCV
+# Install system dependencies for OpenCV *and* audio (ffmpeg + alsa)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+      # OpenCV deps
       libglib2.0-0 \
       libsm6 \
       libxext6 \
       libxrender-dev \
-      libgl1-mesa-glx && \
-    rm -rf /var/lib/apt/lists/*
+      libgl1-mesa-glx \
+      # Audio capture and encoding
+      ffmpeg \
+      alsa-utils \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy & install Python dependencies
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code and fallback image
+# Copy application code and any fallback image you use
 COPY app.py fallback_image.png ./
 
-# Expose the configured stream port
+# Expose the stream port
 EXPOSE ${STREAM_PORT:-8000}
 
-# Launch the FastAPI app with Uvicorn
+# Launch the FastAPI app via Uvicorn
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

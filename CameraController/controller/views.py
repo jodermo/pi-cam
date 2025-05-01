@@ -421,14 +421,31 @@ def app_settings(request):
 
 @login_required
 def media_browser(request):
+    base_url = settings.MEDIA_URL.rstrip('/')
     photos_dir = os.path.join(settings.MEDIA_ROOT, 'photos')
-    files = sorted(os.listdir(photos_dir), reverse=True)
-    images = [
-        settings.MEDIA_URL.rstrip('/') + '/photos/' + fn
-        for fn in files
-        if fn.lower().endswith(('.jpg','jpeg','png'))
-    ]
-    return render(request, 'controller/media_browser.html', {'images': images})
+    videos_dir = os.path.join(settings.MEDIA_ROOT, 'videos')
+    tl_folder = AppConfigSettings.objects.get_or_create(pk=1)[0].timelapse_folder or 'timelapse'
+    tl_dir = os.path.join(settings.MEDIA_ROOT, tl_folder)
+
+    def list_urls(dirpath, exts, subpath):
+        if not os.path.isdir(dirpath):
+            return []
+        return [
+            {'filename': fn, 'url': f"{base_url}/{subpath}/{fn}"}
+            for fn in sorted(os.listdir(dirpath), reverse=True)
+            if fn.lower().endswith(exts)
+        ]
+
+    photos    = list_urls(photos_dir, ('.jpg','.jpeg','.png'), 'photos')
+    videos    = list_urls(videos_dir, ('.mp4',),               'videos')
+    timelapse = list_urls(tl_dir,    ('.jpg','.jpeg','.png'), tl_folder)
+
+    return render(request, 'controller/media_browser.html', {
+        'photos':    photos,
+        'videos':    videos,
+        'timelapses': timelapse,
+    })
+
 
 @login_required
 @csrf_exempt

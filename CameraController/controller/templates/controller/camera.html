@@ -3,13 +3,6 @@
 
 {% block title %}Dashboard - USB Camera Controller{% endblock %}
 
-{% block header %}
-<div class="header-bar">
-  <h1>USB Camera Controller</h1>
-  <div class="status-indicator" id="camera-status"></div>
-</div>
-{% endblock %}
-
 {% block actions %}
 {% if camera_list %}
   <div class="camera-source">
@@ -23,6 +16,10 @@
         {% endfor %}
       </select>
     </form>
+  </div>
+  <div class="header-bar">
+    <h1>USB Camera Controller</h1>
+    <div class="status-indicator" id="camera-status"></div>
   </div>
 {% endif %}
 {% endblock %}
@@ -96,6 +93,12 @@
     Camera recovered
   </div>
 
+
+
+</div>
+{% endblock %}
+
+{% block navigation %}
   <!-- Action buttons: restart, snapshot, record, stop, settings -->
   <div class="card navigation-card span-2">
     <div class="navigation-grid">
@@ -129,8 +132,6 @@
       <div id="last-video-block"></div>
     </div>
   </div>
-
-</div>
 {% endblock %}
 
 {% block scripts %}

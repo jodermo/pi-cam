@@ -45,29 +45,73 @@
 </div>
 {% endblock %}
 
+{% block actions %}
+  {# Photos actions #}
+  <div class="actions-card tab-actions active" data-target="photos">
+    <div class="layout-controls">
+      <button id="photos-grid" class="btn-action active"><i class="fas fa-th-large"></i></button>
+      <button id="photos-list" class="btn-action"><i class="fas fa-list"></i></button>
+    </div>
+    <div class="spacer"></div>
+    <button id="photos-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
+    <form id="photos-download-selected-form" method="post" action="{% url 'download_selected_photos' %}">
+      {% csrf_token %}
+      <div class="selected-inputs"></div>
+      <button id="photos-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
+    </form>
+    <form method="post" action="{% url 'download_all_photos' %}">
+      {% csrf_token %}
+      <button class="btn-action"><i class="fas fa-download"></i> Download All</button>
+    </form>
+    <button id="photos-delete-all" class="btn-action"><i class="fas fa-trash-alt"></i> Delete All</button>
+  </div>
+
+  {# Videos actions #}
+  <div class="actions-card tab-actions" data-target="videos" hidden>
+    <div class="layout-controls">
+      <button id="videos-grid" class="btn-action active"><i class="fas fa-th-large"></i></button>
+      <button id="videos-list" class="btn-action"><i class="fas fa-list"></i></button>
+    </div>
+    <div class="spacer"></div>
+    <button id="videos-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
+    <form id="videos-download-selected-form" method="post" action="{% url 'download_selected_videos' %}">
+      {% csrf_token %}
+      <div class="selected-inputs"></div>
+      <button id="videos-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
+    </form>
+    <form method="post" action="{% url 'download_all_videos' %}">
+      {% csrf_token %}
+      <button class="btn-action"><i class="fas fa-download"></i> Download All</button>
+    </form>
+    <button id="videos-delete-all" class="btn-action"><i class="fas fa-trash-alt"></i> Delete All</button>
+  </div>
+
+  {# Timelapse actions #}
+  <div class="actions-card tab-actions" data-target="timelapse" hidden>
+    <div class="layout-controls">
+      <button id="tl-grid" class="btn-action active"><i class="fas fa-th-large"></i></button>
+      <button id="tl-list" class="btn-action"><i class="fas fa-list"></i></button>
+    </div>
+    <div class="spacer"></div>
+    <button id="tl-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
+    <form id="tl-download-selected-form" method="post" action="{% url 'download_selected_timelapse' %}">
+      {% csrf_token %}
+      <div class="selected-inputs"></div>
+      <button id="tl-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
+    </form>
+    <form method="post" action="{% url 'download_all_timelapse' %}">
+      {% csrf_token %}
+      <button class="btn-action"><i class="fas fa-download"></i> Download All</button>
+    </form>
+    <button id="tl-delete-all" class="btn-action"><i class="fas fa-trash-alt"></i> Delete All</button>
+  </div>
+{% endblock %}
+
 {% block content %}
 <div class="media-container">
 
   {# PHOTOS #}
   <section id="photos" class="tab-content active">
-    <div class="actions-card">
-      <div class="layout-controls">
-        <button id="photos-grid" class="btn-action active"><i class="fas fa-th-large"></i></button>
-        <button id="photos-list" class="btn-action"><i class="fas fa-list"></i></button>
-      </div>
-      <div class="spacer"></div>
-      <button id="photos-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
-      <form id="photos-download-selected-form" method="post" action="{% url 'download_selected_photos' %}">
-        {% csrf_token %}
-        <div class="selected-inputs"></div>
-        <button id="photos-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
-      </form>
-      <form method="post" action="{% url 'download_all_photos' %}">
-        {% csrf_token %}
-        <button class="btn-action"><i class="fas fa-download"></i> Download All</button>
-      </form>
-      <button id="photos-delete-all" class="btn-action"><i class="fas fa-trash-alt"></i> Delete All</button>
-    </div>
     <div id="photos-gallery" class="gallery grid-view">
       {% for photo in photos %}
       <div class="gallery-item" data-filename="{{ photo.filename }}">
@@ -76,7 +120,7 @@
         <div class="item-controls">
           <a href="{{ photo.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
           <button class="btn-action delete-item"
-                  data-url="{% url 'api_delete_photo' filename=photo.filename %}">
+                  data-url="{% url 'delete_photo' filename=photo.filename %}">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
@@ -89,24 +133,6 @@
 
   {# VIDEOS #}
   <section id="videos" class="tab-content" hidden>
-    <div class="actions-card">
-      <div class="layout-controls">
-        <button id="videos-grid" class="btn-action active"><i class="fas fa-th-large"></i></button>
-        <button id="videos-list" class="btn-action"><i class="fas fa-list"></i></button>
-      </div>
-      <div class="spacer"></div>
-      <button id="videos-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
-      <form id="videos-download-selected-form" method="post" action="{% url 'download_selected_videos' %}">
-        {% csrf_token %}
-        <div class="selected-inputs"></div>
-        <button id="videos-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
-      </form>
-      <form method="post" action="{% url 'download_all_videos' %}">
-        {% csrf_token %}
-        <button class="btn-action"><i class="fas fa-download"></i> Download All</button>
-      </form>
-      <button id="videos-delete-all" class="btn-action"><i class="fas fa-trash-alt"></i> Delete All</button>
-    </div>
     <div id="videos-gallery" class="gallery grid-view">
       {% for video in videos %}
       <div class="gallery-item" data-filename="{{ video.filename }}">
@@ -117,7 +143,7 @@
         <div class="item-controls">
           <a href="{{ video.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
           <button class="btn-action delete-item"
-                  data-url="{% url 'api_delete_video' filename=video.filename %}">
+                  data-url="{% url 'delete_video' filename=video.filename %}">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
@@ -130,24 +156,6 @@
 
   {# TIMELAPSE #}
   <section id="timelapse" class="tab-content" hidden>
-    <div class="actions-card">
-      <div class="layout-controls">
-        <button id="tl-grid" class="btn-action active"><i class="fas fa-th-large"></i></button>
-        <button id="tl-list" class="btn-action"><i class="fas fa-list"></i></button>
-      </div>
-      <div class="spacer"></div>
-      <button id="tl-delete-selected" class="btn-action disabled"><i class="fas fa-trash"></i> Delete Selected</button>
-      <form id="tl-download-selected-form" method="post" action="{% url 'download_selected_timelapse' %}">
-        {% csrf_token %}
-        <div class="selected-inputs"></div>
-        <button id="tl-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected</button>
-      </form>
-      <form method="post" action="{% url 'download_all_timelapse' %}">
-        {% csrf_token %}
-        <button class="btn-action"><i class="fas fa-download"></i> Download All</button>
-      </form>
-      <button id="tl-delete-all" class="btn-action"><i class="fas fa-trash-alt"></i> Delete All</button>
-    </div>
     <div id="tl-gallery" class="gallery grid-view">
       {% for tl in timelapses %}
       <div class="gallery-item" data-filename="{{ tl.filename }}">
@@ -156,7 +164,7 @@
         <div class="item-controls">
           <a href="{{ tl.url }}" download class="btn-action"><i class="fas fa-download"></i></a>
           <button class="btn-action delete-item"
-                  data-url="{% url 'api_delete_timelapse' filename=tl.filename %}">
+                  data-url="{% url 'delete_timelapse' filename=tl.filename %}">
             <i class="fas fa-trash-alt"></i>
           </button>
         </div>
@@ -177,28 +185,39 @@
   // Tab switching
   document.querySelectorAll('.navigation-grid .tab').forEach(tab=>{
     tab.addEventListener('click',()=>{
-      document.querySelectorAll('.navigation-grid .tab').forEach(t=>t.classList.remove('active'));
+      // activate tab button
+      document.querySelectorAll('.navigation-grid .tab')
+        .forEach(t=>t.classList.remove('active'));
       tab.classList.add('active');
+
+      // show matching content & actions
+      const target = tab.dataset.target;
       document.querySelectorAll('.tab-content').forEach(s=>{
-        if(s.id === tab.dataset.target) { s.classList.add('active'); s.hidden = false; }
-        else { s.classList.remove('active'); s.hidden = true; }
+        s.id === target
+          ? (s.hidden=false, s.classList.add('active'))
+          : (s.hidden=true, s.classList.remove('active'));
+      });
+      document.querySelectorAll('.tab-actions').forEach(a=>{
+        a.dataset.target===target
+          ? (a.hidden=false, a.classList.add('active'))
+          : (a.hidden=true, a.classList.remove('active'));
       });
     });
   });
 
   const apiDeleteAll = {
-    photos: '{% url "api_photo_list" %}',
-    videos: '{% url "api_video_list" %}',
-    tl:     '{% url "api_timelapse_list" %}'
+    photos: '{% url "photos_api" %}',
+    videos: '{% url "video_api" %}',
+    timelapse: '{% url "timelapse_api" %}'
   };
 
-  ['photos','videos','tl'].forEach(prefix=>{
-    const gallery   = document.getElementById(prefix+'-gallery'),
-          deleteSel = document.getElementById(prefix+'-delete-selected'),
-          downloadSelForm = document.getElementById(prefix+'-download-selected-form'),
-          downloadSelBtn  = document.getElementById(prefix+'-download-selected'),
-          deleteAllBtn    = document.getElementById(prefix+'-delete-all'),
-          boxes     = gallery.querySelectorAll('.select-item');
+  ['photos','videos','timelapse'].forEach(prefix=>{
+    const gallery        = document.getElementById(prefix+'-gallery'),
+          deleteSelBtn   = document.getElementById(prefix+'-delete-selected'),
+          downloadSelForm= document.getElementById(prefix+'-download-selected-form'),
+          downloadSelBtn = document.getElementById(prefix+'-download-selected'),
+          deleteAllBtn   = document.getElementById(prefix+'-delete-all'),
+          boxes          = gallery.querySelectorAll('.select-item');
 
     // Layout toggle
     document.getElementById(prefix+'-grid').addEventListener('click', ()=> {
@@ -212,57 +231,73 @@
       document.getElementById(prefix+'-grid').classList.remove('active');
     });
 
-    // Per-item delete
-    gallery.querySelectorAll('.delete-item').forEach(btn=>{
-      btn.addEventListener('click', async ()=>{
-        if(!confirm('Delete this item?')) return;
-        const res = await fetch(btn.dataset.url, { method:'DELETE', credentials:'same-origin', headers:{ 'X-CSRFToken': csrfToken }});
-        if(res.ok) btn.closest('.gallery-item').remove();
-        else alert('Error deleting item: ' + res.status);
-      });
-    });
-
-    // Batch select
+    // Update batch buttons
     function updateBatch() {
-      const any = [...boxes].some(b=>b.checked);
-      deleteSel.disabled = !any;    deleteSel.classList.toggle('disabled',!any);
-      downloadSelBtn.disabled = !any; downloadSelBtn.classList.toggle('disabled',!any);
+      const anyChecked = [...boxes].some(b=>b.checked);
+      deleteSelBtn.disabled = !anyChecked;
+      deleteSelBtn.classList.toggle('disabled', !anyChecked);
+      downloadSelBtn.disabled = !anyChecked;
+      downloadSelBtn.classList.toggle('disabled', !anyChecked);
     }
     boxes.forEach(b=>b.addEventListener('change', updateBatch));
 
-    // Batch delete-selected
-    deleteSel.addEventListener('click', async ()=>{
+    // Delete single
+    gallery.querySelectorAll('.delete-item').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        if(!confirm('Delete this item?')) return;
+        const res = await fetch(btn.dataset.url, {
+          method:'DELETE',
+          headers:{ 'X-CSRFToken': csrfToken },
+          credentials:'same-origin'
+        });
+        if(res.ok) btn.closest('.gallery-item').remove();
+        else alert('Error deleting item');
+      });
+    });
+
+    // Delete selected
+    deleteSelBtn.addEventListener('click', async ()=>{
       if(!confirm('Delete selected?')) return;
-      const selectedBoxes = [...boxes].filter(b=>b.checked);
-      await Promise.all(selectedBoxes.map(box=>{
-        const item = box.closest('.gallery-item');
-        return fetch(item.querySelector('.delete-item').dataset.url, {method:'DELETE', credentials:'same-origin', headers:{ 'X-CSRFToken': csrfToken }})
-          .then(res=>{ if(res.ok) item.remove(); else console.error('Failed to delete', res.status); });
+      const checked = [...boxes].filter(b=>b.checked);
+      await Promise.all(checked.map(box=>{
+        const url = box.closest('.gallery-item')
+                       .querySelector('.delete-item').dataset.url;
+        return fetch(url, {
+          method:'DELETE',
+          headers:{ 'X-CSRFToken': csrfToken },
+          credentials:'same-origin'
+        }).then(r=>{ if(r.ok) box.closest('.gallery-item').remove(); });
       }));
       updateBatch();
     });
 
-    // Batch download-selected
+    // Download selected
     downloadSelBtn.addEventListener('click', ()=>{
-      const selectedNames = [...boxes].filter(b=>b.checked).map(b=>b.closest('.gallery-item').dataset.filename);
-      if(!selectedNames.length) return;
-      const inputContainer = downloadSelForm.querySelector('.selected-inputs');
-      inputContainer.innerHTML = '';
-      selectedNames.forEach(name=>{
-        const input = document.createElement('input'); input.type = 'hidden'; input.name = 'filenames'; input.value = name;
-        inputContainer.appendChild(input);
+      const names = [...boxes].filter(b=>b.checked)
+                              .map(b=>b.closest('.gallery-item').dataset.filename);
+      const container = downloadSelForm.querySelector('.selected-inputs');
+      container.innerHTML = '';
+      names.forEach(n=>{
+        const inp = document.createElement('input');
+        inp.type  = 'hidden';
+        inp.name  = 'filenames';
+        inp.value = n;
+        container.appendChild(inp);
       });
       downloadSelForm.submit();
     });
 
-    // Batch delete-all
+    // Delete all
     deleteAllBtn.addEventListener('click', async ()=>{
       if(!confirm('Delete all?')) return;
-      const apiUrl = apiDeleteAll[prefix];
-      console.log('Deleting all via', apiUrl);
-      const res = await fetch(apiUrl, { method:'DELETE', credentials:'same-origin', headers:{ 'X-CSRFToken': csrfToken } });
+      const url = apiDeleteAll[prefix];
+      const res = await fetch(url, {
+        method:'DELETE',
+        headers:{ 'X-CSRFToken': csrfToken },
+        credentials:'same-origin'
+      });
       if(res.ok) gallery.innerHTML = '';
-      else alert('Failed to delete all: ' + res.status);
+      else alert('Failed to delete all');
     });
   });
 })();

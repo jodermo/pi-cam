@@ -206,9 +206,9 @@
   });
 
   const apiDeleteAll = {
-    photos: '{% url "photos_api" %}',
-    videos: '{% url "video_api" %}',
-    timelapse: '{% url "timelapse_api" %}'
+    photos: '{% url "api_photo_list" %}',
+    videos: '{% url "api_video_list" %}',
+    timelapse: '{% url "api_timelapse_list" %}'
   };
 
   ['photos','videos','timelapse'].forEach(prefix=>{

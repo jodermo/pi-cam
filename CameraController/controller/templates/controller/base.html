@@ -5,6 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}USB Camera Controller{% endblock %}</title>
+  <link
+    rel="stylesheet"
+    href="{% static 'Font-Awesome/css/all.min.css' %}"
+  />
   <link rel="stylesheet" href="{% static 'controller/styles.css' %}" />
   {% block head %}{% endblock %}
 </head>
@@ -13,33 +17,22 @@
     <footer class="app-header">
       <nav class="app-nav">
         <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">
-          <!-- Camera icon -->
-          <i class="fas fa-camera" aria-hidden="true"></i>
-          <span class="sr-only">Camera</span>
+          <span class="icon">🎥</span>
         </a>
         <a href="{% url 'timelapse_gallery' %}" class="{% if request.resolver_match.url_name == 'timelapse_gallery' %}active{% endif %}">
-          <!-- Timelapse / stopwatch icon -->
-          <i class="fas fa-stopwatch" aria-hidden="true"></i>
-          <span class="sr-only">Timelapse</span>
+          <span class="icon">🕑</span>
         </a>
         <a href="{% url 'media_browser' %}" class="{% if request.resolver_match.url_name == 'media_browser' %}active{% endif %}">
-          <!-- Gallery / film icon -->
-          <i class="fas fa-photo-video" aria-hidden="true"></i>
-          <span class="sr-only">Media</span>
+          <span class="icon">📁</span>
         </a>
         <a href="{% url 'app_settings' %}" class="{% if request.resolver_match.url_name == 'app_settings' %}active{% endif %}">
-          <!-- Settings gear icon -->
-          <i class="fas fa-cog" aria-hidden="true"></i>
-          <span class="sr-only">Settings</span>
+          <span class="icon">⚙</span>
         </a>
         <div class="spacer"></div>
         <a href="{% url 'logout' %}">
-          <!-- Logout door arrow icon -->
-          <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
-          <span class="sr-only">Logout</span>
+          <span class="icon">🚫</span>
         </a>
       </nav>
-      
     </footer>
     {% block actions %}{% endblock %}
     <main class="content">

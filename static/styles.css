@@ -107,6 +107,7 @@ i.fas {
   position: relative;
   flex: 1;
   overflow: hidden;
+  padding: 0 0.5rem;
 }
 
 .media-container {
@@ -261,6 +262,7 @@ i.fas {
   display: flex;
   flex-direction: row;
   justify-content: center;
+  flex: 1;
 }
 
 .stream-overlay {
@@ -980,6 +982,7 @@ select:focus {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.5rem;
+  padding: 0.5rem;
 }
 
 @media (min-width: 576px) {

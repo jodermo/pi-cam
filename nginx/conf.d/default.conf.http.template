@@ -30,8 +30,8 @@ server {
     
     # Audio stream - proxy directly to camera container
     location = /api/stream/audio {
-        access_log off;   # Turn off access logs completely
-        error_log /dev/null crit;   # Send errors to /dev/null
+        access_log off;
+        error_log /dev/null crit;
         proxy_pass         http://pi-cam-camera:8000/api/stream/audio;
         proxy_http_version 1.1;
         proxy_set_header   Host              $host;
@@ -39,6 +39,12 @@ server {
         proxy_set_header   Connection        "";
         chunked_transfer_encoding off;
         proxy_buffering    off;
+        
+        # Add these lines:
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_set_header   Range "";        # Important for audio streaming
+        add_header         Cache-Control no-cache;
     }
     
     # Camera service health check

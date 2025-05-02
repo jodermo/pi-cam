@@ -402,9 +402,15 @@ def open_audio(idx: int = 0):
         cmd = [
             "ffmpeg",
             *input_args,
-            "-acodec", "libopus",
-            "-b:a", "64k",
-            "-f", "ogg",
+            "-c:a", "libopus",      # Changed from -acodec to -c:a
+            "-b:a", "48k",          # Lower bitrate for better stability
+            "-ar", "48000",         # Standard sample rate
+            "-ac", "2",             # Stereo output
+            "-vbr", "on",           # Variable bit rate
+            "-compression_level", "10",  # Maximum compression
+            "-application", "audio",  # Optimize for audio
+            "-packet_loss", "5",    # More resilient streaming
+            "-f", "ogg",            # Container format
             "pipe:1"
         ]
         
@@ -615,9 +621,18 @@ def stream_audio():
     if not audio_proc or audio_proc.stdout is None:
         raise HTTPException(503, "Audio not initialized")
     
+    # Add proper headers for streaming
+    headers = {
+        "Content-Type": "audio/ogg",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+    }
+    
     return StreamingResponse(
         audio_proc.stdout,
-        media_type="audio/ogg"
+        media_type="audio/ogg",
+        headers=headers
     )
 
 # Also add the API path to ensure compatibility with updated nginx config
@@ -626,9 +641,18 @@ def api_stream_audio():
     if not audio_proc or audio_proc.stdout is None:
         raise HTTPException(503, "Audio not initialized")
     
+    # Add proper headers for streaming
+    headers = {
+        "Content-Type": "audio/ogg",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+    }
+    
     return StreamingResponse(
         audio_proc.stdout,
-        media_type="audio/ogg"
+        media_type="audio/ogg",
+        headers=headers
     )
 
 # ----------------------------------------------------------------------------

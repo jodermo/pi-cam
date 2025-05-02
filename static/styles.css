@@ -474,10 +474,12 @@ select:focus {
 .gallery.list-view {
   width: 100%;
   display: flex;
+  flex-direction: column;
   aspect-ratio: inherit;
 }
 
 .gallery.list-view .gallery-item {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -486,6 +488,7 @@ select:focus {
   border-radius: var(--radius);
   background: var(--clr-panel);
   margin-bottom: 0.5rem;
+  aspect-ratio: inherit;
 }
 
 .gallery-item {
@@ -715,7 +718,11 @@ select:focus {
     min-height: 400px;
   }
 }
-
+.player-wrapper{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
 .timelapse-viewer .player {
   position: relative;
   display: inline-block;
@@ -724,6 +731,8 @@ select:focus {
   align-items: center;
   justify-content: center;
   min-height: 250px;
+  max-width: 100%;
+  width: auto;
 }
 
 @media (min-width: 992px) {
@@ -1166,6 +1175,8 @@ input[type="range"]::-moz-range-thumb {
   flex-direction: column;
   gap: 0.5rem;
   width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .timelapse-container .toggle-fullscreen,

@@ -1154,11 +1154,12 @@ input[type="range"]::-moz-range-thumb {
   width: 100%;
 }
 
-.timelapse-container .toggle-fullscreen {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 100;
+.timelapse-container .toggle-fullscreen,
+.stream-overlay .toggle-fullscreen {
+  position: absolute !important;
+  top: 1rem !important;
+  right: 1rem !important;
+  z-index: 100 !important;
 }
 
 @media (min-width: 768px) {

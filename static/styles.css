@@ -240,20 +240,10 @@ i.fas {
 ---------------------------------------*/
 .card,
 .form-panel {
-  background: var(--clr-panel);
-  border: 1px solid var(--clr-border);
-  border-radius: var(--radius);
-  padding: 0.75rem;
   overflow: hidden;
   margin-bottom: 1rem;
 }
 
-@media (min-width: 768px) {
-  .card,
-  .form-panel {
-    padding: var(--spacing-md);
-  }
-}
 
 .card.stream-card,
 .card.timelapse-viewer {

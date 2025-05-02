@@ -432,7 +432,6 @@ class CameraController {
         return response;
       } catch (error) {
         this.onError(`Failed to switch camera: ${error.message}`);
-        this.testAudioStream();
         throw error;
       }
     }
@@ -520,55 +519,6 @@ class CameraController {
       }
     }
 
-    /**
-     * Test audio stream directly with a temporary audio element
-     * @returns {Promise<boolean>} - Promise that resolves to true if stream is available
-     */
-    async testAudioStream() {
-      return new Promise((resolve) => {
-        const testAudio = document.createElement('audio');
-        
-        // Properly form the URL
-        const baseUrl = window.location.origin;
-        const audioUrl = this.audioStreamUrl.startsWith('http') 
-          ? this.audioStreamUrl 
-          : `${baseUrl}${this.audioStreamUrl}`;
-        
-        testAudio.src = `${audioUrl}?test=${Date.now()}`;
-        testAudio.preload = 'auto';
-        testAudio.muted = true;
-        
-        // Set up event handlers
-        testAudio.addEventListener('canplay', () => {
-          console.log('Audio stream test successful');
-          testAudio.pause();
-          testAudio.remove();
-          resolve(true);
-        });
-        
-        testAudio.addEventListener('error', (event) => {
-          const error = event.target.error;
-          console.error('Audio stream test failed:', {
-            code: error ? error.code : 'unknown',
-            message: error ? error.message : 'unknown'
-          });
-          testAudio.remove();
-          resolve(false);
-        });
-        
-        // Start loading
-        testAudio.load();
-        
-        // Set timeout for test
-        setTimeout(() => {
-          if (testAudio.readyState < 3) {
-            console.warn('Audio stream test timed out');
-            testAudio.remove();
-            resolve(false);
-          }
-        }, 5000);
-      });
-    }
     
     /**
      * Restart the camera service

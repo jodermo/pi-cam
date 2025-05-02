@@ -27,7 +27,7 @@ class TimelapseController {
       this.currentFrameIndex = 0;
       this.isPlaying = false;
       this.playInterval = null;
-      this.playbackSpeed = 500; // ms between frames
+      this.playbackSpeed = 100; // ms between frames
       
       // Canvas elements
       this.canvas = document.getElementById('timelapse-canvas');

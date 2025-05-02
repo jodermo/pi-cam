@@ -448,7 +448,8 @@ class CameraController {
         console.log("Current audio URL:", this.audioStreamUrl);
         
         // Send request to switch audio
-        const endpoint = `${this.endpoints.switchAudio}${audioIdx}/`;
+        //const endpoint = `${this.endpoints.switchAudio}${audioIdx}/`;
+        const endpoint = this.endpoints.switchAudio.replace('/0', `/${audioIdx}`); // this is correct way
         const response = await this._apiRequest(endpoint, 'POST');
         
         this.currentAudio = audioIdx;

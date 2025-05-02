@@ -238,14 +238,20 @@
 {% block scripts %}
 <!-- Any page-specific scripts can go here -->
  <script>
-document.getElementById('audio-toggle').addEventListener('click', function() {
-  cameraController.toggleAudio();
-  // Update the UI based on mute state
-  this.innerHTML = cameraController.isMuted ? 
-    '<i class="fas fa-volume-mute"></i>' : 
-    '<i class="fas fa-volume-up"></i>';
+  document.getElementById('audio-toggle').addEventListener('click', function() {
+  const audioStream = document.getElementById('audio-stream');
+  const audioToggle = document.getElementById('audio-toggle');
+
+  if (audioStream.muted) {
+    audioStream.muted = false;
+    audioToggle.innerHTML = '<i class="fas fa-volume-up"></i>';
+    audioToggle.title = "Mute Audio";
+  } else {
+    audioStream.muted = true;
+    audioToggle.innerHTML = '<i class="fas fa-volume-mute"></i>';
+    audioToggle.title = "Unmute Audio";
+  }
 });
-const audioStream = document.getElementById('audio-stream');
 
 
   </script>

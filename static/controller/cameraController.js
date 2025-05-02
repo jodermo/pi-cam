@@ -87,6 +87,19 @@ class CameraController {
         this.audioElement = document.createElement('audio');
         this.audioElement.id = this.audioElementId;
         this.audioElement.style.display = 'none';
+        this.audioElement.src = this.audioStreamUrl;
+        this.audioElement.preload = 'auto';
+        this.audioElement.muted = true; // Start muted
+        this.audioElement.crossOrigin = 'anonymous'; 
+        this.audioElement.addEventListener('error', (event) => {
+          const error = event.target.error;
+          console.error('Audio stream error:', {
+            code: error ? error.code : 'unknown',
+            message: error ? error.message : 'unknown',
+            networkState: this.audioElement.networkState,
+            readyState: this.audioElement.readyState
+          });
+        });
         document.body.appendChild(this.audioElement);
       }
       
@@ -426,24 +439,29 @@ class CameraController {
     async switchAudio(audioIdx) {
       try {
         // Send request to switch audio
-        const endpoint = this.endpoints.switchAudio.replace('/0', `/${audioIdx}`);
+        const endpoint = `${this.endpoints.switchAudio}${audioIdx}/`;
         const response = await this._apiRequest(endpoint, 'POST');
         
-        
         this.currentAudio = audioIdx;
-        this.audioElement.crossOrigin = 'anonymous';
-        this.audioElement.muted = true; 
-        // Reload the audio stream
+        
+        // Update the audio element with the same URL to force a reload
+        const currentSrc = this.audioElement.src;
+        this.audioElement.src = '';
         this.audioElement.load();
-        this.audioElement.addEventListener('error', (event) => {
-          const error = event.target.error;
-          console.error('Audio stream error:', {
-            code: error ? error.code : 'unknown',
-            message: error ? error.message : 'unknown',
-            networkState: this.audioElement.networkState,
-            readyState: this.audioElement.readyState
-          });
-        });
+        
+        // Small delay before setting the source again
+        setTimeout(() => {
+          this.audioElement.src = currentSrc;
+          this.audioElement.load();
+          
+          // Only try to play if not muted
+          if (!this.isMuted) {
+            this.audioElement.play().catch(error => {
+              console.warn('Could not play audio after switch:', error);
+            });
+          }
+        }, 500);
+        
         // Call the callback if provided
         if (this.onAudioSwitch) {
           this.onAudioSwitch(audioIdx, response);

@@ -79,12 +79,12 @@
 
 <!-- Timelapse Settings Modal -->
 <div id="timelapse-settings-modal" class="modal" aria-hidden="true">
-  <form method="post" class="settings-grid" class="modal-wrapper">
+  <form method="post"  class="modal-wrapper">
     <div class="modal-header">
       <button class="modal-close" id="close-tl-settings">&times;</button>
     </div>
     <div class="modal-content">
-      <div method="post" class="settings-grid">
+      <div class="settings-grid">
         {% csrf_token %}
         {% for field in form.visible_fields %}
         <div class="setting-row">

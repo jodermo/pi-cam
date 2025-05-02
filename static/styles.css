@@ -715,12 +715,14 @@ select:focus {
 
 .modal-header, .modal-footer {
   padding: 1rem;
-  border-bottom: 1px solid var(--clr-border);
+}
+
+.modal-header{
+  min-height: 4rem;
 }
 
 .modal-footer {
   border-bottom: none;
-  border-top: 1px solid var(--clr-border);
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;

@@ -72,7 +72,7 @@
     <form id="videos-download-selected-form" method="post" action="{% url 'download_selected_videos' %}">
       {% csrf_token %}
       <div class="selected-inputs"></div>
-      <button id="videos-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> Download Selected <span class="selection-count" style="display:none;">0</span></button>
+      <button id="videos-download-selected" type="button" class="btn-action disabled"><i class="fas fa-download"></i> <span class="selection-count" style="display:none;">0</span></button>
     </form>
     <form method="post" action="{% url 'download_all_videos' %}">
       {% csrf_token %}

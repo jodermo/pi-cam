@@ -256,7 +256,6 @@ i.fas {
 .card,
 .form-panel {
   overflow: hidden;
-  margin-bottom: 1rem;
 }
 
 
@@ -778,14 +777,8 @@ select:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
   gap: 0.5rem;
-}
-
-@media (min-width: 576px) {
-  .timelapse-controls {
-    margin-bottom: 1rem;
-  }
+  overflow: hidden;
 }
 
 .timeline-slider {

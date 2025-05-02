@@ -659,10 +659,12 @@ select:focus {
   background: var(--clr-panel);
   color: var(--clr-text);
   border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
   width: 95%;
   max-width: 90%;
   max-height: 90%;
-  overflow: auto;
+  overflow: hidden;
   z-index: 1000;
 }
 
@@ -675,6 +677,9 @@ select:focus {
 
 .modal-content {
   padding: var(--spacing-md);
+  overflow-x: hidden;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .modal-header, .modal-footer {

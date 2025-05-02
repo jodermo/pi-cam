@@ -9,17 +9,16 @@
     <button id="play-pause" class="btn-action">
       <i class="fas fa-play" aria-hidden="true"></i>
       <i class="fas fa-pause" aria-hidden="true" style="display:none;"></i>
-      <span class="button-text">Play</span>
     </button>
     
     <div class="playback-info">
-      Frame <span id="current-frame">0</span>/<span id="total-frames">{{ images|length }}</span>
+      <i class="fas fa-film" aria-hidden="true"></i>  <span id="current-frame">0</span>/<span id="total-frames">{{ images|length }}</span>
       <span class="time-display" id="playback-speed">100ms</span>
     </div>
   </div>
   
   <div class="action-group">
-    <label for="speed-number">Speed:</label>
+    <label for="speed-number"><i class="fas fa-tachometer-alt" aria-hidden="true"></i></label>
     <input id="speed-number" type="number" min="25" max="2000" value="100" class="input-field speed-input" />
     <input id="speed-slider" type="range" min="25" max="2000" step="25" value="100" class="speed-slider" />
   </div>
@@ -80,13 +79,12 @@
 
 <!-- Timelapse Settings Modal -->
 <div id="timelapse-settings-modal" class="modal" aria-hidden="true">
-  <div class="modal-wrapper">
+  <form method="post" class="settings-grid" class="modal-wrapper">
     <div class="modal-header">
       <button class="modal-close" id="close-tl-settings">&times;</button>
-      <h2 class="card-title">Timelapse Settings</h2>
     </div>
     <div class="modal-content">
-      <form method="post" class="settings-grid">
+      <div method="post" class="settings-grid">
         {% csrf_token %}
         {% for field in form.visible_fields %}
         <div class="setting-row">
@@ -100,14 +98,18 @@
           </div>
         </div>
         {% endfor %}
-        <div class="setting-row form-actions">
-          <div class="form-group">
-            <button type="submit" class="btn-action">Save Settings</button>
-          </div>
-        </div>
-      </form>
+      </div>
     </div>
-  </div>
+    <div class="modal-footer">
+      <div class="setting-row form-actions">
+        <div class="form-group">
+          <button type="submit" class="btn-action">
+            <i class="fas fa-save"></i> 
+          </button>
+        </div>
+      </div>
+    </div>
+  </form>
   <div class="modal-backdrop"></div>
 </div>
 {% endblock %}
@@ -126,7 +128,12 @@
           loading="lazy"
         />
       {% empty %}
-        <p class="muted">No timelapse frames available. Go to the camera page to capture some.</p>
+        <div class="empty-state muted">
+          <span class="fa-stack fa-3x" aria-hidden="true">
+            <i class="fas fa-stopwatch fa-stack-2x"></i>
+            <i class="fas fa-ban fa-stack-1x fa-inverse"></i>
+          </span>
+        </div>
       {% endfor %}
     </div>
   </div>

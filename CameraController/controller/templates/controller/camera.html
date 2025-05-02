@@ -8,7 +8,7 @@
   <div class="device-controls">
     {% if camera_list %}
     <div class="device-selector">
-      <span>Camera:</span>
+      <i class="fas fa-camera" aria-hidden="true"></i>
       <select id="camera-select" name="idx">
         {% for camera in camera_list %}
           <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == active_index %}selected{% endif %}>
@@ -21,7 +21,7 @@
     
     {% if audio_inputs %}
     <div class="device-selector">
-      <span>Audio:</span>
+      <i class="fas fa-microphone" aria-hidden="true"></i>
       <select id="audio-select">
         {% for device in audio_inputs %}
           <option value="{{ forloop.counter0 }}"
@@ -44,7 +44,7 @@
   
   <div class="status-display">
     <div class="status-indicator online" id="camera-status"></div>
-    <span id="status-text">Camera {{ active_index|add:"1" }}</span>
+    <span id="status-text"><i class="fas fa-camera"></i> {{ active_index|add:"1" }}</span>
   </div>
 </div>
 {% endblock %}
@@ -98,7 +98,7 @@
       <video controls src="{{ last_video_url }}"></video>
       <div class="video-controls">
         <a href="{{ last_video_url }}" download class="btn-action">
-          <i class="fas fa-download"></i> Download
+          <i class="fas fa-download"></i>
         </a>
       </div>
     </div>
@@ -108,23 +108,23 @@
   <!-- Camera control buttons -->
   <div class="stream-controls">
     <button id="capture-btn" class="btn-action" data-action="capture">
-      <i class="fas fa-camera"></i> Capture
+      <i class="fas fa-camera"></i>
     </button>
     
     <button id="record-btn" class="btn-action {% if is_recording %}active{% endif %}" data-action="record">
       {% if is_recording %}
-      <i class="fas fa-stop-circle"></i> Stop Recording
+      <i class="fas fa-stop-circle"></i>
       {% else %}
-      <i class="fas fa-dot-circle"></i> Record
+      <i class="fas fa-dot-circle"></i>
       {% endif %}
     </button>
     
     <button id="settings-btn" class="btn-action" data-action="settings">
-      <i class="fas fa-cog"></i> Settings
+      <i class="fas fa-cog"></i>
     </button>
     
     <button id="restart-btn" class="btn-action" data-action="restart">
-      <i class="fas fa-sync-alt"></i> Restart
+      <i class="fas fa-sync-alt"></i>
     </button>
   </div>
 
@@ -133,7 +133,6 @@
     <div class="modal-wrapper">
       <div class="modal-header">
         <button class="modal-close" id="close-settings">&times;</button>
-        <h2>Camera Settings</h2>
       </div>
       <div class="modal-content">
         <div class="settings-grid">
@@ -164,6 +163,8 @@
             <span></span>
           </div>
         </div>
+      </div>
+      <div class="modal-footer">
       </div>
     </div>
     <div class="modal-backdrop"></div>

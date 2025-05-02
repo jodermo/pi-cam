@@ -104,15 +104,9 @@ i.fas {
 }
 
 .content {
+  position: relative;
   flex: 1;
-  overflow-y: auto;
-  padding: 0.5rem;
-}
-
-@media (min-width: 768px) {
-  .content {
-    padding: 1rem;
-  }
+  overflow: hidden;
 }
 
 .media-container {
@@ -983,7 +977,6 @@ select:focus {
   15. Advanced Camera Controls
 ---------------------------------------*/
 .stream-controls {
-  padding: 0.5rem;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.5rem;
@@ -991,7 +984,6 @@ select:focus {
 
 @media (min-width: 576px) {
   .stream-controls {
-    padding: 1rem;
     gap: 0.5rem;
   }
 }

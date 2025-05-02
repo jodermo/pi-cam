@@ -117,10 +117,16 @@ i.fas {
 
 .media-container {
   width: 100%;
-  margin: 0 auto;
   padding: 0.5rem;
+  gap: 1rem;
   overflow-x: hidden;
 }
+
+.media-container .tab-content {
+  position: relative;
+  width: 100%;
+}
+
 
 @media (min-width: 768px) {
   .media-container {
@@ -466,7 +472,9 @@ select:focus {
 }
 
 .gallery.list-view {
-  display: block;
+  width: 100%;
+  display: flex;
+  aspect-ratio: inherit;
 }
 
 .gallery.list-view .gallery-item {
@@ -578,6 +586,10 @@ select:focus {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
+}
+
+.actions-card > *{
+  flex: 1;
 }
 
 @media (min-width: 768px) {
@@ -1126,11 +1138,7 @@ input[type="range"]::-moz-range-thumb {
 
 /* Media Browser Tabs - Vertical on large screens */
 @media (min-width: 1200px) {
-  .media-container {
-    display: grid;
-    grid-template-columns: 200px 1fr;
-    gap: 1rem;
-  }
+
   
   .navigation-card {
     height: auto;
@@ -1145,8 +1153,8 @@ input[type="range"]::-moz-range-thumb {
   }
   
   .navigation-grid .tab {
-    text-align: left;
-    justify-content: flex-start;
+    text-align: center;
+    justify-content: center;
   }
 }
 

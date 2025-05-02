@@ -621,12 +621,15 @@ def stream_audio():
     if not audio_proc or audio_proc.stdout is None:
         raise HTTPException(503, "Audio not initialized")
     
-    # Add proper headers for streaming
+    # Add proper headers for streaming and CORS
     headers = {
         "Content-Type": "audio/ogg",
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "Pragma": "no-cache",
-        "Expires": "0"
+        "Expires": "0",
+        "Access-Control-Allow-Origin": "*",  # Allow cross-origin access
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "*"
     }
     
     return StreamingResponse(

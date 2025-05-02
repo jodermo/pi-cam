@@ -87,7 +87,12 @@ class CameraController {
         this.audioElement = document.createElement('audio');
         this.audioElement.id = this.audioElementId;
         this.audioElement.style.display = 'none';
-        this.audioElement.src = this.audioStreamUrl;
+        const baseUrl = window.location.origin;
+        const audioUrl = this.audioStreamUrl.startsWith('http') 
+          ? this.audioStreamUrl 
+          : `${baseUrl}${this.audioStreamUrl}`;
+
+        this.audioElement.src = audioUrl;
         this.audioElement.preload = 'auto';
         this.audioElement.muted = true; // Start muted
         this.audioElement.crossOrigin = 'anonymous'; 
@@ -427,6 +432,7 @@ class CameraController {
         return response;
       } catch (error) {
         this.onError(`Failed to switch camera: ${error.message}`);
+        this.testAudioStream();
         throw error;
       }
     }
@@ -438,29 +444,68 @@ class CameraController {
      */
     async switchAudio(audioIdx) {
       try {
+        // Log the URL being used
+        console.log("Current audio URL:", this.audioStreamUrl);
+        
         // Send request to switch audio
-        const endpoint = this.endpoints.switchAudio.replace('/0', `/${audioIdx}`);
+        const endpoint = `${this.endpoints.switchAudio}${audioIdx}/`;
         const response = await this._apiRequest(endpoint, 'POST');
         
         this.currentAudio = audioIdx;
         
-        // Update the audio element with the same URL to force a reload
-        const currentSrc = this.audioElement.src;
-        this.audioElement.src = '';
-        this.audioElement.load();
+        // Create a new audio element instead of modifying the existing one
+        const oldAudio = this.audioElement;
         
-        // Small delay before setting the source again
-        setTimeout(() => {
-          this.audioElement.src = currentSrc;
-          this.audioElement.load();
-          
-          // Only try to play if not muted
-          if (!this.isMuted) {
+        // Create new audio element
+        const newAudio = document.createElement('audio');
+        newAudio.id = this.audioElementId;
+        newAudio.style.display = 'none';
+        newAudio.preload = 'auto';
+        newAudio.muted = this.isMuted;
+        newAudio.crossOrigin = 'anonymous';
+        
+        // Add error handler
+        newAudio.addEventListener('error', (event) => {
+          const error = event.target.error;
+          console.error('Audio stream error:', {
+            code: error ? error.code : 'unknown',
+            message: error ? error.message : 'unknown',
+            networkState: newAudio.networkState,
+            readyState: newAudio.readyState
+          });
+        });
+        
+        // Add canplay handler
+        newAudio.addEventListener('canplay', () => {
+          console.log('New audio stream ready');
+        });
+        
+        // Properly form the URL with a cache-busting parameter
+        const baseUrl = window.location.origin;
+        const audioUrl = this.audioStreamUrl.startsWith('http') 
+          ? this.audioStreamUrl 
+          : `${baseUrl}${this.audioStreamUrl}`;
+        
+        newAudio.src = `${audioUrl}?t=${Date.now()}`;
+        
+        // Replace the old element
+        if (oldAudio.parentNode) {
+          oldAudio.parentNode.replaceChild(newAudio, oldAudio);
+        } else {
+          document.body.appendChild(newAudio);
+        }
+        
+        // Update reference
+        this.audioElement = newAudio;
+        
+        // Only try to play if not muted
+        if (!this.isMuted) {
+          setTimeout(() => {
             this.audioElement.play().catch(error => {
               console.warn('Could not play audio after switch:', error);
             });
-          }
-        }, 500);
+          }, 500);
+        }
         
         // Call the callback if provided
         if (this.onAudioSwitch) {
@@ -472,6 +517,56 @@ class CameraController {
         this.onError(`Failed to switch audio: ${error.message}`);
         throw error;
       }
+    }
+
+    /**
+     * Test audio stream directly with a temporary audio element
+     * @returns {Promise<boolean>} - Promise that resolves to true if stream is available
+     */
+    async testAudioStream() {
+      return new Promise((resolve) => {
+        const testAudio = document.createElement('audio');
+        
+        // Properly form the URL
+        const baseUrl = window.location.origin;
+        const audioUrl = this.audioStreamUrl.startsWith('http') 
+          ? this.audioStreamUrl 
+          : `${baseUrl}${this.audioStreamUrl}`;
+        
+        testAudio.src = `${audioUrl}?test=${Date.now()}`;
+        testAudio.preload = 'auto';
+        testAudio.muted = true;
+        
+        // Set up event handlers
+        testAudio.addEventListener('canplay', () => {
+          console.log('Audio stream test successful');
+          testAudio.pause();
+          testAudio.remove();
+          resolve(true);
+        });
+        
+        testAudio.addEventListener('error', (event) => {
+          const error = event.target.error;
+          console.error('Audio stream test failed:', {
+            code: error ? error.code : 'unknown',
+            message: error ? error.message : 'unknown'
+          });
+          testAudio.remove();
+          resolve(false);
+        });
+        
+        // Start loading
+        testAudio.load();
+        
+        // Set timeout for test
+        setTimeout(() => {
+          if (testAudio.readyState < 3) {
+            console.warn('Audio stream test timed out');
+            testAudio.remove();
+            resolve(false);
+          }
+        }, 5000);
+      });
     }
     
     /**

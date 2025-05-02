@@ -705,9 +705,10 @@ select:focus {
 }
 
 .timelapse-viewer .player {
-  background: #000;
   position: relative;
-  display: flex;
+  display: inline-block;
+  margin: 0 auto;
+  width: auto;
   align-items: center;
   justify-content: center;
   min-height: 250px;

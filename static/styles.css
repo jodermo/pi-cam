@@ -580,10 +580,6 @@ select:focus {
   8. Batch Actions / Action Cards
 ---------------------------------------*/
 .actions-card {
-  background: var(--clr-panel);
-  border: 1px solid var(--clr-border);
-  border-radius: var(--radius);
-  padding: 0.75rem;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -596,7 +592,6 @@ select:focus {
 
 @media (min-width: 768px) {
   .actions-card {
-    padding: var(--spacing-md);
     gap: var(--spacing-sm);
   }
 }
@@ -1367,4 +1362,147 @@ button:focus, a:focus, input:focus, select:focus {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+
+/* Media browser specific styles */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.gallery-controls {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--clr-bg);
+  padding: 0.5rem 0;
+  margin-bottom: 1rem;
+}
+
+.gallery-item {
+  position: relative;
+  transition: transform 0.2s;
+}
+
+.gallery-item:hover {
+  transform: scale(1.02);
+}
+
+.gallery-item .select-item {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 5;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.gallery.list-view .gallery-item {
+  margin-bottom: 1rem;
+}
+
+.gallery.list-view .gallery-item img,
+.gallery.list-view .gallery-item video {
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  margin-right: 1rem;
+}
+
+.gallery.list-view .item-controls {
+  position: static;
+  margin-left: auto;
+}
+
+.gallery.list-view .gallery-item .select-item {
+  position: static;
+  margin-right: 1rem;
+}
+
+.selection-count {
+  background: var(--clr-primary);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius);
+  margin-left: 0.5rem;
+}
+
+/* Enhanced modal */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  z-index: 999;
+}
+
+.media-preview {
+  max-width: 90vw;
+  max-height: 80vh;
+  object-fit: contain;
+}
+
+
+.recording-indicator {
+  display: none;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background-color: rgba(255, 0, 0, 0.7);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  animation: pulse 1s infinite;
+  z-index: 10;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.device-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.device-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.status-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  background-color: var(--clr-error);
+}
+
+.status-indicator.online {
+  background-color: var(--clr-accent);
+}
+
+.status-display {
+  display: flex;
+  align-items: center;
 }

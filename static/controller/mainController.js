@@ -99,12 +99,20 @@ document.addEventListener('DOMContentLoaded', function() {
     if (recordBtn) {
       recordBtn.addEventListener('click', function() {
         if (controller.isRecording) {
-          controller.stopRecording();
+          controller.stopRecording().then(() => {
+            // Update button appearance when recording stops
+            recordBtn.classList.remove('active');
+            recordBtn.innerHTML = '<i class="fas fa-dot-circle"></i> Record';
+          });
         } else {
           const audioIdx = audioSelect ? parseInt(audioSelect.value, 10) : 0;
           controller.startRecording({
             audioIdx: audioIdx,
             timerElement: document.getElementById('recording-timer') || document.getElementById('recording-duration')
+          }).then(() => {
+            // Update button appearance when recording starts
+            recordBtn.classList.add('active');
+            recordBtn.innerHTML = '<i class="fas fa-stop-circle"></i> Stop Recording';
           });
         }
       });

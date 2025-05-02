@@ -12,9 +12,9 @@ class MediaBrowserController {
    */
   constructor(controller) {
     this.controller = controller;
-    this.csrfToken = controller._getCsrfToken();
-    this.activeTab = 'photos';
-    this.selectedItems = { photos: [], videos: [], tl: [] };
+    this.csrfToken = this._getCsrfToken(); // Fixed to not rely on controller method
+    this.activeTab = 'photos'; // Default active tab
+    this.selectedItems = { photos: [], videos: [], timelapse: [] }; // Fixed key name for timelapse
     this.pendingOperations = 0;
     
     // Initialize components
@@ -31,34 +31,55 @@ class MediaBrowserController {
   }
   
   /**
+   * Get CSRF token from cookies
+   * @returns {string} CSRF token
+   */
+  _getCsrfToken() {
+    // Add fallback method to get CSRF token if controller doesn't provide it
+    if (this.controller && typeof this.controller._getCsrfToken === 'function') {
+      return this.controller._getCsrfToken();
+    }
+    
+    // Extract from cookie directly as fallback
+    const name = 'csrftoken';
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(row => row.startsWith(name + '='))
+      ?.split('=')[1];
+      
+    return cookieValue || '';
+  }
+  
+  /**
    * Initialize tab navigation
    */
   initTabs() {
     const tabs = document.querySelectorAll('.tab');
-    const tabContents = document.querySelectorAll('.tab-content');
     
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         // Deactivate all tabs
         tabs.forEach(t => t.classList.remove('active'));
-        tabContents.forEach(c => {
-          c.hidden = true;
-          c.classList.remove('active');
+        
+        // Hide all tab content sections
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.hidden = true;
+          content.classList.remove('active');
         });
         
         // Activate clicked tab
         const target = tab.dataset.target;
         tab.classList.add('active');
         
-        // Show corresponding content sections
+        // Show corresponding content section
         const contentElement = document.getElementById(target);
-        const actionsElement = document.getElementById(target + 'Actions');
-        
         if (contentElement) {
           contentElement.hidden = false;
           contentElement.classList.add('active');
         }
         
+        // Show corresponding actions section
+        const actionsElement = document.getElementById(target + 'Actions');
         if (actionsElement) {
           actionsElement.hidden = false;
           actionsElement.classList.add('active');
@@ -85,16 +106,21 @@ class MediaBrowserController {
    * Initialize grid/list view toggles
    */
   initViewToggles() {
-    const sections = ['photos', 'videos', 'tl'];
+    // Define sections properly to match the actual DOM structure
+    const sections = [
+      {id: 'photos', gallery: 'photos-gallery'},
+      {id: 'videos', gallery: 'videos-gallery'},
+      {id: 'timelapse', gallery: 'tl-gallery'} // Fixed mapping for timelapse
+    ];
     
     sections.forEach(section => {
-      const gridBtn = document.getElementById(`${section}-grid`);
-      const listBtn = document.getElementById(`${section}-list`);
-      const gallery = document.getElementById(`${section === 'tl' ? 'tl' : section + 's'}-gallery`);
+      const gridBtn = document.getElementById(`${section.id === 'timelapse' ? 'tl' : section.id}-grid`);
+      const listBtn = document.getElementById(`${section.id === 'timelapse' ? 'tl' : section.id}-list`);
+      const gallery = document.getElementById(section.gallery);
       
       if (gridBtn && listBtn && gallery) {
         // Save view preference in localStorage
-        const savedView = localStorage.getItem(`${section}-view`) || 'grid';
+        const savedView = localStorage.getItem(`${section.id}-view`) || 'grid';
         if (savedView === 'list') {
           listBtn.classList.add('active');
           gridBtn.classList.remove('active');
@@ -112,7 +138,7 @@ class MediaBrowserController {
           gridBtn.classList.add('active');
           gallery.classList.remove('list-view');
           gallery.classList.add('grid-view');
-          localStorage.setItem(`${section}-view`, 'grid');
+          localStorage.setItem(`${section.id}-view`, 'grid');
         });
         
         listBtn.addEventListener('click', () => {
@@ -120,7 +146,7 @@ class MediaBrowserController {
           listBtn.classList.add('active');
           gallery.classList.remove('grid-view');
           gallery.classList.add('list-view');
-          localStorage.setItem(`${section}-view`, 'list');
+          localStorage.setItem(`${section.id}-view`, 'list');
         });
       }
     });
@@ -130,26 +156,31 @@ class MediaBrowserController {
    * Initialize item selection controls
    */
   initSelectionControls() {
-    const sections = ['photos', 'videos', 'tl'];
+    // Define sections properly to match the actual DOM structure
+    const sections = [
+      {id: 'photos', gallery: 'photos-gallery', selectPrefix: 'photos'},
+      {id: 'videos', gallery: 'videos-gallery', selectPrefix: 'videos'},
+      {id: 'timelapse', gallery: 'tl-gallery', selectPrefix: 'tl'} // Fixed mapping for timelapse
+    ];
     
     sections.forEach(section => {
-      const selectAllBtn = document.getElementById(`${section}-select-all`);
-      const unselectAllBtn = document.getElementById(`${section}-unselect-all`);
-      const gallery = document.getElementById(`${section === 'tl' ? 'tl' : section + 's'}-gallery`);
+      const selectAllBtn = document.getElementById(`${section.selectPrefix}-select-all`);
+      const unselectAllBtn = document.getElementById(`${section.selectPrefix}-unselect-all`);
+      const gallery = document.getElementById(section.gallery);
       
       if (selectAllBtn && unselectAllBtn && gallery) {
         selectAllBtn.addEventListener('click', () => {
           const checkboxes = gallery.querySelectorAll('.select-item');
           checkboxes.forEach(cb => cb.checked = true);
-          this.updateSelectionState(section);
-          this.showNotification(`Selected all ${section}`, 'info');
+          this.updateSelectionState(section.id);
+          this.showNotification(`Selected all ${section.id}`, 'info');
         });
         
         unselectAllBtn.addEventListener('click', () => {
           const checkboxes = gallery.querySelectorAll('.select-item');
           checkboxes.forEach(cb => cb.checked = false);
-          this.updateSelectionState(section);
-          this.showNotification(`Deselected all ${section}`, 'info');
+          this.updateSelectionState(section.id);
+          this.showNotification(`Deselected all ${section.id}`, 'info');
         });
         
         // Make whole gallery item clickable to toggle selection
@@ -167,7 +198,7 @@ class MediaBrowserController {
             const checkbox = item.querySelector('.select-item');
             if (checkbox) {
               checkbox.checked = !checkbox.checked;
-              this.updateSelectionState(section);
+              this.updateSelectionState(section.id);
             }
           });
         });
@@ -175,7 +206,7 @@ class MediaBrowserController {
         // Listen for individual checkbox changes
         gallery.addEventListener('change', e => {
           if (e.target.classList.contains('select-item')) {
-            this.updateSelectionState(section);
+            this.updateSelectionState(section.id);
           }
         });
       }
@@ -186,7 +217,12 @@ class MediaBrowserController {
    * Initialize delete controls
    */
   initDeleteControls() {
-    const sections = ['photos', 'videos', 'tl'];
+    // Define sections properly to match the actual DOM structure
+    const sections = [
+      {id: 'photos', gallery: 'photos-gallery', deletePrefix: 'photos', apiType: 'photo'},
+      {id: 'videos', gallery: 'videos-gallery', deletePrefix: 'videos', apiType: 'video'},
+      {id: 'timelapse', gallery: 'tl-gallery', deletePrefix: 'tl', apiType: 'timelapse'} 
+    ];
     
     // Individual item delete buttons
     document.querySelectorAll('.delete-item').forEach(btn => {
@@ -208,8 +244,8 @@ class MediaBrowserController {
     
     // Delete selected buttons
     sections.forEach(section => {
-      const deleteSelectedBtn = document.getElementById(`${section}-delete-selected`);
-      const gallery = document.getElementById(`${section === 'tl' ? 'tl' : section + 's'}-gallery`);
+      const deleteSelectedBtn = document.getElementById(`${section.deletePrefix}-delete-selected`);
+      const gallery = document.getElementById(section.gallery);
       
       if (deleteSelectedBtn && gallery) {
         deleteSelectedBtn.addEventListener('click', () => {
@@ -221,14 +257,13 @@ class MediaBrowserController {
             return;
           }
           
-          const type = section === 'tl' ? 'timelapse' : section.slice(0, -1); // Remove 's' from "photos"/"videos"
           const urls = selectedItems.map(item => 
             item.querySelector('.delete-item').dataset.url
           );
           
           this.confirmDelete(
             selectedItems.map(item => item.dataset.filename),
-            type,
+            section.apiType,
             () => this.deleteItems(selectedItems, urls)
           );
         });
@@ -237,26 +272,38 @@ class MediaBrowserController {
     
     // Delete all buttons
     sections.forEach(section => {
-      const deleteAllBtn = document.getElementById(`${section}-delete-all`);
-      const apiEndpoint = section === 'photos' ? 'photosList' : 
-                         section === 'videos' ? 'videosList' : 'timelapseList';
+      const deleteAllBtn = document.getElementById(`${section.deletePrefix}-delete-all`);
+      const gallery = document.getElementById(section.gallery);
       
-      if (deleteAllBtn && this.controller.endpoints[apiEndpoint]) {
+      if (deleteAllBtn && gallery) {
         deleteAllBtn.addEventListener('click', () => {
-          const gallery = document.getElementById(`${section === 'tl' ? 'tl' : section + 's'}-gallery`);
           const items = gallery.querySelectorAll('.gallery-item');
           
           if (items.length === 0) {
-            this.showNotification(`No ${section} to delete`, 'warning');
+            this.showNotification(`No ${section.id} to delete`, 'warning');
             return;
           }
           
-          const type = section === 'tl' ? 'timelapse' : section.slice(0, -1);
+          // Determine API endpoint URL from a sample item if possible
+          let apiEndpoint = '';
+          const sampleDeleteBtn = gallery.querySelector('.delete-item');
+          if (sampleDeleteBtn && sampleDeleteBtn.dataset.url) {
+            // Extract the base API path from the sample delete URL
+            const urlParts = sampleDeleteBtn.dataset.url.split('/');
+            // Remove the filename part and keep the base path
+            urlParts.pop();
+            apiEndpoint = urlParts.join('/') + '/delete-all/';
+          }
+          
+          if (!apiEndpoint) {
+            // Fallback to constructing URLs based on section type
+            apiEndpoint = `/api/delete-all-${section.apiType}s/`;
+          }
           
           this.confirmDelete(
             Array.from(items).map(item => item.dataset.filename),
-            type,
-            () => this.deleteAll(section, apiEndpoint)
+            section.apiType,
+            () => this.deleteAll(section.id, apiEndpoint)
           );
         });
       }
@@ -267,12 +314,17 @@ class MediaBrowserController {
    * Initialize download controls
    */
   initDownloadControls() {
-    const sections = ['photos', 'videos', 'tl'];
+    // Define sections properly to match the actual DOM structure
+    const sections = [
+      {id: 'photos', gallery: 'photos-gallery', downloadPrefix: 'photos'},
+      {id: 'videos', gallery: 'videos-gallery', downloadPrefix: 'videos'},
+      {id: 'timelapse', gallery: 'tl-gallery', downloadPrefix: 'tl'} 
+    ];
     
     sections.forEach(section => {
-      const downloadSelectedBtn = document.getElementById(`${section}-download-selected`);
-      const downloadForm = document.getElementById(`${section}-download-selected-form`);
-      const gallery = document.getElementById(`${section === 'tl' ? 'tl' : section + 's'}-gallery`);
+      const downloadSelectedBtn = document.getElementById(`${section.downloadPrefix}-download-selected`);
+      const downloadForm = document.getElementById(`${section.downloadPrefix}-download-selected-form`);
+      const gallery = document.getElementById(section.gallery);
       
       if (downloadSelectedBtn && downloadForm && gallery) {
         downloadSelectedBtn.addEventListener('click', () => {
@@ -286,6 +338,15 @@ class MediaBrowserController {
           // Clear existing inputs
           const inputsContainer = downloadForm.querySelector('.selected-inputs');
           inputsContainer.innerHTML = '';
+          
+          // Add CSRF token if not present in the form
+          if (!downloadForm.querySelector('input[name="csrfmiddlewaretoken"]')) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = this.csrfToken;
+            inputsContainer.appendChild(csrfInput);
+          }
           
           // Add selected filenames as hidden inputs
           selectedItems.forEach(checkbox => {
@@ -328,7 +389,8 @@ class MediaBrowserController {
           e.stopPropagation();
           
           const url = btn.dataset.url;
-          const isVideo = url.toLowerCase().endsWith('.mp4');
+          const isVideo = btn.closest('.gallery-item').dataset.type === 'video' || 
+                         url.toLowerCase().endsWith('.mp4');
           const item = btn.closest('.gallery-item');
           const filename = item ? item.dataset.filename : 'Media';
           
@@ -394,6 +456,13 @@ class MediaBrowserController {
     this.confirmMessage = document.getElementById('confirm-message');
     
     if (this.confirmModal) {
+      // Setup confirm button
+      const confirmBtn = this.confirmModal.querySelector('[data-action="confirm"]');
+      if (confirmBtn) {
+        // Store the original button for cloning
+        this.originalConfirmBtn = confirmBtn.cloneNode(true);
+      }
+      
       // Setup close buttons
       this.confirmModal.querySelectorAll('[data-action="cancel"]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -422,19 +491,25 @@ class MediaBrowserController {
     // Auto-play videos on hover in galleries
     document.querySelectorAll('.gallery').forEach(gallery => {
       gallery.addEventListener('mouseover', (e) => {
-        // Find closest video element
-        const videoEl = e.target.closest('.gallery-item')?.querySelector('video');
-        if (videoEl && !videoEl.hasAttribute('data-playing')) {
-          videoEl.setAttribute('data-playing', 'true');
-          videoEl.play().catch(() => {});
+        // Find closest video element within the hovered item
+        const item = e.target.closest('.gallery-item');
+        if (!item) return;
+        
+        const videoEl = item.querySelector('video');
+        if (videoEl && videoEl.tagName === 'VIDEO') {
+          videoEl.play().catch(() => {
+            // Ignore autoplay errors
+          });
         }
       });
       
       gallery.addEventListener('mouseout', (e) => {
-        // Find closest video element
-        const videoEl = e.target.closest('.gallery-item')?.querySelector('video');
-        if (videoEl && videoEl.hasAttribute('data-playing')) {
-          videoEl.removeAttribute('data-playing');
+        // Find closest video element within the previously hovered item
+        const item = e.target.closest('.gallery-item');
+        if (!item) return;
+        
+        const videoEl = item.querySelector('video');
+        if (videoEl && videoEl.tagName === 'VIDEO') {
           videoEl.pause();
           videoEl.currentTime = 0;
         }
@@ -448,6 +523,12 @@ class MediaBrowserController {
    * @returns {string} - The item type (photo, video, timelapse)
    */
   getTypeFromItem(item) {
+    // First check if the type is explicitly set on the item
+    if (item.dataset.type) {
+      return item.dataset.type;
+    }
+    
+    // Otherwise determine from which gallery it belongs to
     const gallery = item.closest('.gallery');
     if (!gallery) return 'unknown';
     
@@ -460,12 +541,22 @@ class MediaBrowserController {
   
   /**
    * Update selection state (enable/disable batch buttons)
-   * @param {string} section - Section ID (photos, videos, tl)
+   * @param {string} section - Section ID (photos, videos, timelapse)
    */
   updateSelectionState(section) {
-    const gallery = document.getElementById(`${section === 'tl' ? 'tl' : section + 's'}-gallery`);
-    const deleteSelectedBtn = document.getElementById(`${section}-delete-selected`);
-    const downloadSelectedBtn = document.getElementById(`${section}-download-selected`);
+    // Map section ID to DOM element IDs
+    const prefixMap = {
+      'photos': 'photos',
+      'videos': 'videos',
+      'timelapse': 'tl'
+    };
+    
+    const prefix = prefixMap[section] || section;
+    const galleryId = section === 'timelapse' ? 'tl-gallery' : `${section}-gallery`;
+    
+    const gallery = document.getElementById(galleryId);
+    const deleteSelectedBtn = document.getElementById(`${prefix}-delete-selected`);
+    const downloadSelectedBtn = document.getElementById(`${prefix}-download-selected`);
     
     if (gallery && deleteSelectedBtn && downloadSelectedBtn) {
       const selectedItems = gallery.querySelectorAll('.select-item:checked');
@@ -523,16 +614,30 @@ class MediaBrowserController {
     
     // Set confirm button action
     const confirmBtn = this.confirmModal.querySelector('[data-action="confirm"]');
+    const footer = confirmBtn.parentNode;
     
-    // Remove existing listeners
-    const newConfirmBtn = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    // Remove existing button
+    confirmBtn.remove();
     
-    // Add new listener
+    // Create new button based on the original
+    const newConfirmBtn = this.originalConfirmBtn ? 
+      this.originalConfirmBtn.cloneNode(true) : 
+      document.createElement('button');
+    
+    if (!this.originalConfirmBtn) {
+      newConfirmBtn.className = 'btn-action';
+      newConfirmBtn.setAttribute('data-action', 'confirm');
+      newConfirmBtn.textContent = 'Confirm';
+    }
+    
+    // Add event listener
     newConfirmBtn.addEventListener('click', () => {
       this.closeConfirmModal();
       onConfirm();
     });
+    
+    // Add to DOM
+    footer.appendChild(newConfirmBtn);
     
     // Show modal
     this.confirmModal.setAttribute('aria-hidden', 'false');
@@ -586,6 +691,7 @@ class MediaBrowserController {
           
           successCount++;
         } else {
+          console.error('Delete error:', response.status, response.statusText);
           errorCount++;
         }
       } catch (error) {
@@ -605,8 +711,8 @@ class MediaBrowserController {
       this.showNotification(`Failed to delete ${errorCount} item${errorCount !== 1 ? 's' : ''}`, 'error');
     }
     
-    // Update selection counts
-    this.updateSelectionState(this.activeTab);
+    // Update selection counts for the active tab
+    this.updateSelectionState(this.activeTab === 'tl' ? 'timelapse' : this.activeTab);
     
     // Update empty state if needed
     this.checkEmptyGallery();
@@ -614,28 +720,39 @@ class MediaBrowserController {
   
   /**
    * Delete all items in a section
-   * @param {string} section - Section ID (photos, videos, tl)
+   * @param {string} section - Section ID (photos, videos, timelapse)
    * @param {string} apiEndpoint - API endpoint for deletion
    */
   async deleteAll(section, apiEndpoint) {
     this.startOperation();
     
     try {
-      const response = await fetch(this.controller.endpoints[apiEndpoint], {
+      const response = await fetch(apiEndpoint, {
         method: 'DELETE',
         headers: {
-          'X-CSRFToken': this.csrfToken
+          'X-CSRFToken': this.csrfToken,
+          'Content-Type': 'application/json'
         }
       });
       
       if (!response.ok) {
-        throw new Error('Delete request failed');
+        throw new Error(`Delete request failed: ${response.status} ${response.statusText}`);
       }
       
-      const data = await response.json();
+      // Try to parse response as JSON, but handle case where it might not be
+      let deletedCount = 0;
+      try {
+        const data = await response.json();
+        deletedCount = data.deleted || 0;
+      } catch (e) {
+        // If not JSON, assume success but unknown count
+        deletedCount = 'all';
+      }
       
       // Clear the gallery
-      const gallery = document.getElementById(`${section === 'tl' ? 'tl' : section + 's'}-gallery`);
+      const galleryId = section === 'timelapse' ? 'tl-gallery' : `${section}-gallery`;
+      const gallery = document.getElementById(galleryId);
+      
       if (gallery) {
         // Fade out all items
         const items = gallery.querySelectorAll('.gallery-item');
@@ -652,13 +769,18 @@ class MediaBrowserController {
           if (gallery.querySelector('.muted') === null) {
             const message = document.createElement('p');
             message.className = 'muted';
-            message.textContent = `No ${section === 'tl' ? 'timelapse frames' : section} available.`;
+            message.textContent = `No ${section === 'timelapse' ? 'timelapse frames' : section} available.`;
             gallery.appendChild(message);
           }
         }, 300);
       }
       
-      this.showNotification(`Successfully deleted ${data.deleted} item${data.deleted !== 1 ? 's' : ''}`, 'success');
+      this.showNotification(
+        `Successfully deleted ${deletedCount === 'all' ? 'all' : deletedCount} ${section} items`, 
+        'success'
+      );
+      
+      // Update UI selection state
       this.updateSelectionState(section);
     } catch (error) {
       console.error('Delete all error:', error);
@@ -672,10 +794,15 @@ class MediaBrowserController {
    * Check if gallery is empty and show placeholder message
    */
   checkEmptyGallery() {
-    const sections = ['photos', 'videos', 'tl'];
+    // Map section IDs to gallery elements
+    const galleries = [
+      {section: 'photos', id: 'photos-gallery'},
+      {section: 'videos', id: 'videos-gallery'},
+      {section: 'timelapse', id: 'tl-gallery'}
+    ];
     
-    sections.forEach(section => {
-      const gallery = document.getElementById(`${section === 'tl' ? 'tl' : section + 's'}-gallery`);
+    galleries.forEach(({section, id}) => {
+      const gallery = document.getElementById(id);
       if (!gallery) return;
       
       const items = gallery.querySelectorAll('.gallery-item');
@@ -684,7 +811,7 @@ class MediaBrowserController {
       if (items.length === 0 && !emptyMessage) {
         const message = document.createElement('p');
         message.className = 'muted';
-        message.textContent = `No ${section === 'tl' ? 'timelapse frames' : section} available.`;
+        message.textContent = `No ${section === 'timelapse' ? 'timelapse frames' : section} available.`;
         gallery.appendChild(message);
       } else if (items.length > 0 && emptyMessage) {
         emptyMessage.remove();
@@ -734,7 +861,7 @@ class MediaBrowserController {
       return;
     }
     
-    // Fallback to custom implementation
+    // Fallback implementation when global function is not available
     const container = document.getElementById('notification-container') || 
                      document.createElement('div');
     
@@ -759,10 +886,10 @@ class MediaBrowserController {
   }
 }
 
-// Initialize the media browser if we're on the correct page
+// Initialize the media browser on page load
 document.addEventListener('DOMContentLoaded', function() {
-  if (typeof window.controller !== 'undefined' && document.querySelector('.gallery')) {
+  if (document.querySelector('.gallery')) {
     // Create media browser controller instance
-    window.mediaBrowserController = new MediaBrowserController(window.controller);
+    window.mediaBrowserController = new MediaBrowserController(window.controller || {});
   }
 });

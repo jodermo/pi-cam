@@ -252,7 +252,7 @@ class CameraController {
       element.textContent = this._formatTime(elapsedSeconds);
     }
 
-    
+
     /**
      * Toggle fullscreen mode for the video stream
      * @param {HTMLElement} buttonElement - The button element that triggered fullscreen
@@ -454,6 +454,12 @@ class CameraController {
         this.isRecording = true;
         this.recordingStartTime = new Date();
         
+        // Show recording indicator if it exists
+        const recordingIndicator = document.getElementById('recording-indicator');
+        if (recordingIndicator) {
+          recordingIndicator.style.display = 'block';
+        }
+        
         // Start timer if timerElement is provided
         if (options.timerElement) {
           this._updateRecordingTimer(options.timerElement);
@@ -491,6 +497,12 @@ class CameraController {
         this.isRecording = false;
         this.recordingStartTime = null;
         
+        // Hide recording indicator if it exists
+        const recordingIndicator = document.getElementById('recording-indicator');
+        if (recordingIndicator) {
+          recordingIndicator.style.display = 'none';
+        }
+        
         // Clear timer if it exists
         if (this.recordingTimer) {
           clearInterval(this.recordingTimer);
@@ -501,7 +513,7 @@ class CameraController {
         if (this.onRecordingStopped) {
           this.onRecordingStopped(response);
         }
-        
+
         return response;
       } catch (error) {
         this.onError('Failed to stop recording: ' + error.message);

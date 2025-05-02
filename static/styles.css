@@ -722,16 +722,21 @@ select:focus {
   width: 100%;
   display: flex;
   justify-content: center;
+  flex: 1;
+  overflow: hidden;
 }
+
+.player-container{
+  position: relative;
+  margin: 0 auto;
+}
+
 .timelapse-viewer .player {
   position: relative;
   display: inline-block;
-  margin: 0 auto;
-  width: auto;
-  align-items: center;
-  justify-content: center;
+
   min-height: 250px;
-  max-width: 100%;
+  height: 100%;
   width: auto;
 }
 

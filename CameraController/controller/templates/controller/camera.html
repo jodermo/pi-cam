@@ -125,11 +125,12 @@
       />
       
       <audio
-        id="audio-stream"
-        src="{{ audio_stream_url }}"
-        preload="auto"
-        style="display: none;"
-      ></audio>
+      id="audio-stream"
+      src="{{ audio_stream_url }}"
+      preload="auto"
+      autoplay
+      muted
+    ></audio>
       
       <div id="recording-indicator" class="recording-indicator" {% if is_recording %}style="display: block;"{% endif %}>
         <i class="fas fa-circle"></i> 
@@ -236,4 +237,26 @@
 
 {% block scripts %}
 <!-- Any page-specific scripts can go here -->
+ <script>
+  document.getElementById('audio-toggle').addEventListener('click', function() {
+  const audioStream = document.getElementById('audio-stream');
+  const audioToggle = document.getElementById('audio-toggle');
+  
+  if (audioStream.muted) {
+    audioStream.muted = false;
+    audioToggle.innerHTML = '<i class="fas fa-volume-up"></i>';
+    audioToggle.title = "Mute Audio";
+  } else {
+    audioStream.muted = true;
+    audioToggle.innerHTML = '<i class="fas fa-volume-mute"></i>';
+    audioToggle.title = "Unmute Audio";
+  }
+});
+const audioStream = document.getElementById('audio-stream');
+
+audioStream.addEventListener('error', function() {
+  console.error('Audio stream error:', audioStream.error);
+  // Display an error message to the user
+});
+  </script>
 {% endblock %}

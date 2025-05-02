@@ -22,6 +22,9 @@ MEDIA/
 # Django staticfiles
 staticfiles/
 
+USBCameraApp/yoloModel/yolov3.weights
+*.weights
+
 # Logs
 *.log
 *.log.*
@@ -54,3 +57,4 @@ Thumbs.db
 gunicorn.log
 gunicorn-access.log
 gunicorn-error.log
+USBCameraApp/yoloModel/yolov3.weights

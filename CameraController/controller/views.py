@@ -952,12 +952,12 @@ def audio_sources(request):
 
 @login_required
 @require_POST
-def switch_audio(request, idx, idy):
+def switch_audio(request, idx):
     """
     Instruct the FastAPI service to switch to a different audio input.
     """
     try:
-        resp = requests.post(f"{API_BASE}/switch-audio/{idx}/{idy}", timeout=5)
+        resp = requests.post(f"{API_BASE}/switch-audio/{idx}", timeout=5)
         resp.raise_for_status()
         return JsonResponse(resp.json())
     except requests.HTTPError as e:

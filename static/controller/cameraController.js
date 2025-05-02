@@ -431,10 +431,19 @@ class CameraController {
         
         
         this.currentAudio = audioIdx;
-        
+        this.audioElement.crossOrigin = 'anonymous';
+        this.audioElement.muted = true; 
         // Reload the audio stream
         this.audioElement.load();
-        
+        this.audioElement.addEventListener('error', (event) => {
+          const error = event.target.error;
+          console.error('Audio stream error:', {
+            code: error ? error.code : 'unknown',
+            message: error ? error.message : 'unknown',
+            networkState: this.audioElement.networkState,
+            readyState: this.audioElement.readyState
+          });
+        });
         // Call the callback if provided
         if (this.onAudioSwitch) {
           this.onAudioSwitch(audioIdx, response);

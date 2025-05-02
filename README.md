@@ -40,6 +40,15 @@ Everything runs in containers—just configure your `.env`, plug in a camera, an
     ```
 
 
+## Upload yolo model
+
+Replace username and hostaddress with your server credentials:
+
+```
+cd /pi-cam
+cp USBCameraApp/yoloModel/yolov3.weights username@hostaddress:/home/username/pi-cam/USBCameraApp/yoloModel/
+```
+
 ## Configutration
 
 ###### Device Mapping in `docker-compose.yml`

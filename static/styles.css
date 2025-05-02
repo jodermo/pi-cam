@@ -53,6 +53,15 @@ body {
   flex: 1;
 }
 
+.fullscreen-video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+  max-width: 100vw;
+  max-height: 100vh;
+}
+
+
 /* Responsive font sizes based on screen size */
 html {
   font-size: 14px;
@@ -1138,10 +1147,18 @@ input[type="range"]::-moz-range-thumb {
 
 /* Timelapse gallery responsive fixes */
 .timelapse-container {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   width: 100%;
+}
+
+.timelapse-container .toggle-fullscreen {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
 }
 
 @media (min-width: 768px) {

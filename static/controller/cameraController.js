@@ -15,6 +15,9 @@ class CameraController {
      * @param {Object} options.endpoints - API endpoint URLs
      * @param {Array} options.settingsFields - Camera settings fields available for adjustment
      */
+
+    isFullscreen = false;
+
     constructor(options) {
       // Required parameters
       this.videoElementId = options.videoElementId || 'camera-stream';
@@ -49,6 +52,7 @@ class CameraController {
       this.currentCamera = 0;
       this.currentAudio = 0;
       this.isMuted = true;
+      this.isFullscreen = false;
       
       // Stream elements
       this.videoElement = null;
@@ -75,7 +79,7 @@ class CameraController {
       // Get stream elements
       this.videoElement = document.getElementById(this.videoElementId);
       this.audioElement = document.getElementById(this.audioElementId);
-      
+      const toggleFullscreenButton = document.getElementById('toggle-fullscreen');
       if (!this.videoElement) {
         console.error(`Video element with ID ${this.videoElementId} not found`);
         return;
@@ -115,6 +119,12 @@ class CameraController {
       this.audioElement.src = this.audioStreamUrl;
       this.audioElement.preload = 'auto';
       
+
+      if(toggleFullscreenButton){
+        toggleFullscreenButton.addEventListener('click', () => {
+          this.toggleFullscreen(toggleFullscreenButton);
+        });
+      }
       // Setup event handlers
       this._setupEventHandlers();
     }
@@ -241,7 +251,124 @@ class CameraController {
       const elapsedSeconds = Math.floor((now - this.recordingStartTime) / 1000);
       element.textContent = this._formatTime(elapsedSeconds);
     }
+
     
+    /**
+     * Toggle fullscreen mode for the video stream
+     * @param {HTMLElement} buttonElement - The button element that triggered fullscreen
+     */
+    toggleFullscreen(buttonElement) {
+      try {
+        // Get container element - either a specific container or the video element's parent
+        const container = document.getElementById('camera-container') || this.videoElement.parentElement;
+
+        // Toggle fullscreen state
+        this.isFullscreen = !this.isFullscreen;
+        
+        if (this.isFullscreen) {
+          // Enter fullscreen mode
+          if (container.requestFullscreen) {
+            container.requestFullscreen();
+          } else if (container.mozRequestFullScreen) { // Firefox
+            container.mozRequestFullScreen();
+          } else if (container.webkitRequestFullscreen) { // Chrome, Safari
+            container.webkitRequestFullscreen();
+          } else if (container.msRequestFullscreen) { // IE/Edge
+            container.msRequestFullscreen();
+          }
+          
+          // Add active class to button if provided
+          if (buttonElement) {
+            buttonElement.classList.add('active');
+          }
+          
+          // Apply fullscreen styles to video
+          this.videoElement.classList.add('fullscreen-video');
+        } else {
+          // Exit fullscreen mode
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) { // Firefox
+            document.mozCancelFullScreen();
+          } else if (document.webkitExitFullscreen) { // Chrome, Safari
+            document.webkitExitFullscreen();
+          } else if (document.msExitFullscreen) { // IE/Edge
+            document.msExitFullscreen();
+          }
+          
+          // Remove active class from button if provided
+          if (buttonElement) {
+            buttonElement.classList.remove('active');
+          }
+          
+          // Remove fullscreen styles from video
+          this.videoElement.classList.remove('fullscreen-video');
+        }
+        
+        // Listen for fullscreen change events
+        this._setupFullscreenChangeListener();
+        
+      } catch (error) {
+        console.error('Error toggling fullscreen:', error);
+        // Reset fullscreen state if there was an error
+        this.isFullscreen = false;
+        if (buttonElement) {
+          buttonElement.classList.remove('active');
+        }
+      }
+    }
+
+    /**
+     * Setup listener for fullscreen change events
+     * @private
+     */
+    _setupFullscreenChangeListener() {
+      const fullscreenChangeHandler = () => {
+        // Check if we're actually in fullscreen mode
+        const isActuallyFullscreen = (
+          document.fullscreenElement ||
+          document.webkitFullscreenElement ||
+          document.mozFullScreenElement ||
+          document.msFullscreenElement
+        );
+        
+        // If fullscreen state doesn't match actual state (e.g. user pressed ESC)
+        if (this.isFullscreen !== !!isActuallyFullscreen) {
+          this.isFullscreen = !!isActuallyFullscreen;
+          
+          // Update button state if available
+          const button = document.getElementById('toggle-fullscreen');
+          if (button) {
+            if (this.isFullscreen) {
+              button.classList.add('active');
+            } else {
+              button.classList.remove('active');
+            }
+          }
+          
+          // Toggle fullscreen class on video element
+          if (this.videoElement) {
+            if (this.isFullscreen) {
+              this.videoElement.classList.add('fullscreen-video');
+            } else {
+              this.videoElement.classList.remove('fullscreen-video');
+            }
+          }
+        }
+      };
+      
+      // Remove existing event listeners to prevent duplicates
+      document.removeEventListener('fullscreenchange', fullscreenChangeHandler);
+      document.removeEventListener('webkitfullscreenchange', fullscreenChangeHandler);
+      document.removeEventListener('mozfullscreenchange', fullscreenChangeHandler);
+      document.removeEventListener('MSFullscreenChange', fullscreenChangeHandler);
+      
+      // Add event listeners for different browsers
+      document.addEventListener('fullscreenchange', fullscreenChangeHandler);
+      document.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
+      document.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
+      document.addEventListener('MSFullscreenChange', fullscreenChangeHandler);
+    }
     /**
      * Toggle audio playback (mute/unmute)
      * @returns {boolean} - New mute state

@@ -11,6 +11,8 @@ class TimelapseController {
      * Initialize the timelapse controller
      * @param {CameraController|Object} controller - The main camera controller instance or configuration
      */
+    isFullscreen = false;
+
     constructor(controller) {
       // If controller is the main CameraController instance
       if (controller && typeof controller._getCsrfToken === 'function') {
@@ -28,6 +30,8 @@ class TimelapseController {
       this.isPlaying = false;
       this.playInterval = null;
       this.playbackSpeed = 100; // ms between frames
+
+      this.isFullscreen = false;
       
       // Canvas elements
       this.canvas = document.getElementById('timelapse-canvas');
@@ -95,7 +99,7 @@ class TimelapseController {
       const playPauseBtn = document.getElementById('play-pause');
       const playIcon = playPauseBtn ? playPauseBtn.querySelector('.fa-play') : null;
       const pauseIcon = playPauseBtn ? playPauseBtn.querySelector('.fa-pause') : null;
-      
+      const toggleFullscreenButton = document.getElementById('toggle-fullscreen');
       if (playPauseBtn && playIcon && pauseIcon) {
         playPauseBtn.addEventListener('click', () => {
           if (this.isPlaying) {
@@ -114,6 +118,12 @@ class TimelapseController {
       const speedSlider = document.getElementById('speed-slider');
       const speedNumber = document.getElementById('speed-number');
       const downloadSpeed = document.getElementById('download-speed');
+
+      if(toggleFullscreenButton){
+        toggleFullscreenButton.addEventListener('click', () => {
+          this.toggleFullscreen(toggleFullscreenButton);
+        });
+      }
       
       if (speedSlider && speedNumber) {
         // Update number input when slider changes
@@ -153,7 +163,95 @@ class TimelapseController {
         });
       }
     }
+
+    toggleFullscreen(buttonElement) {
+      try {
+        const container = document.getElementById('timelapse-container') || this.canvas.parentElement;
+        
+        // Toggle fullscreen state
+        this.isFullscreen = !this.isFullscreen;
+        
+        if (this.isFullscreen) {
+          // Request fullscreen on the container element
+          if (container.requestFullscreen) {
+            container.requestFullscreen();
+          } else if (container.mozRequestFullScreen) { // Firefox
+            container.mozRequestFullScreen();
+          } else if (container.webkitRequestFullscreen) { // Chrome, Safari
+            container.webkitRequestFullscreen();
+          } else if (container.msRequestFullscreen) { // IE/Edge
+            container.msRequestFullscreen();
+          }
+          
+          // Add active class to button if provided
+          if (buttonElement) {
+            buttonElement.classList.add('active');
+          }
+        } else {
+          // Exit fullscreen
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) { // Firefox
+            document.mozCancelFullScreen();
+          } else if (document.webkitExitFullscreen) { // Chrome, Safari
+            document.webkitExitFullscreen();
+          } else if (document.msExitFullscreen) { // IE/Edge
+            document.msExitFullscreen();
+          }
+          
+          // Remove active class from button if provided
+          if (buttonElement) {
+            buttonElement.classList.remove('active');
+          }
+        }
+        
+        // Adjust canvas size when entering/exiting fullscreen
+        this.resizeCanvasForFullscreen();
+        
+      } catch (error) {
+        console.error('Error toggling fullscreen:', error);
+        // Reset fullscreen state if there was an error
+        this.isFullscreen = false;
+        if (buttonElement) {
+          buttonElement.classList.remove('active');
+        }
+      }
+    }
     
+    // Add this helper method to resize the canvas when fullscreen changes
+    resizeCanvasForFullscreen() {
+      if (!this.canvas) return;
+      
+      if (this.isFullscreen) {
+        // Save original dimensions to restore later
+        this.originalWidth = this.canvas.width;
+        this.originalHeight = this.canvas.height;
+        
+        // Set canvas to fill the screen while maintaining aspect ratio
+        const aspectRatio = this.originalWidth / this.originalHeight;
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        
+        if (screenWidth / screenHeight > aspectRatio) {
+          // Screen is wider than canvas aspect ratio
+          this.canvas.style.height = '90vh';
+          this.canvas.style.width = 'auto';
+        } else {
+          // Screen is taller than canvas aspect ratio
+          this.canvas.style.width = '90vw';
+          this.canvas.style.height = 'auto';
+        }
+      } else {
+        // Restore original dimensions
+        this.canvas.style.width = '';
+        this.canvas.style.height = '';
+        
+        // Redraw the current frame to fix any scaling issues
+        if (this.frames.length > 0) {
+          this.drawFrame(this.currentFrameIndex);
+        }
+      }
+    }
     // Initialize settings modal
     initSettingsModal() {
       const openSettingsBtn = document.getElementById('open-tl-settings');

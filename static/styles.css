@@ -155,7 +155,7 @@ i.fas {
 
 .camera-stream, #camera-stream {
   max-width: 100%;
-  height: auto;
+  height: 100%;
   object-fit: contain;
 }
 
@@ -257,7 +257,9 @@ i.fas {
 .form-panel {
   overflow: hidden;
 }
-
+.card.stream-card{
+  flex: 1;
+}
 
 .card.stream-card,
 .card.timelapse-viewer {

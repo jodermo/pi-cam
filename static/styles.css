@@ -130,11 +130,11 @@ i.fas {
 
 .stream-wrapper {
   position: relative;
-  flex: 1;
-  width: 100%;
+  width: auto;
   height: 100%;
   min-height: 250px;
-  display: flex;
+  display: inline-block;
+  margin: 0 auto;
   justify-content: center;
   overflow: hidden;
   border-radius: var(--radius);
@@ -257,6 +257,9 @@ i.fas {
 .card.stream-card,
 .card.timelapse-viewer {
   padding: 0 !important;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
 }
 
 .stream-overlay {
@@ -1136,7 +1139,8 @@ input[type="range"]::-moz-range-thumb {
   
   .navigation-grid {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
   
   .navigation-grid .tab {
@@ -1144,6 +1148,7 @@ input[type="range"]::-moz-range-thumb {
     justify-content: flex-start;
   }
 }
+
 
 /* Timelapse gallery responsive fixes */
 .timelapse-container {
@@ -1160,6 +1165,7 @@ input[type="range"]::-moz-range-thumb {
   top: 1rem !important;
   right: 1rem !important;
   z-index: 100 !important;
+  pointer-events: all !important;
 }
 
 @media (min-width: 768px) {
